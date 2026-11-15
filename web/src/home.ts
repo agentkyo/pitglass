@@ -101,8 +101,11 @@ export function mountHome(root: HTMLElement): () => void {
 
     // --- games
     body(games)
-    const opts: [string, string][] = [['', t('default')], ...net.layouts.filter((l) => l.id !== 'idle').map((l): [string, string] => [l.id, l.name])]
     for (const id of Object.keys(GAMES)) {
+      // layouts drawn for this kind of vehicle come first in the menu
+      const fits = (l: Layout) => l.kind === GAMES[id].kind
+      const pickable = net.layouts.filter((l) => l.id !== 'idle')
+      const opts: [string, string][] = [['', t('default')], ...pickable.filter(fits).concat(pickable.filter((l) => !fits(l))).map((l): [string, string] => [l.id, l.name])]
       const src = st.sources.find((s) => s.id === SOURCE_OF[id])
       const live = st.game === id
       const state = live ? 'on' : src && src.state === 'blocked' ? 'blocked' : 'off'
@@ -224,8 +227,21 @@ export function mountHome(root: HTMLElement): () => void {
     bar.appendChild(file)
     layouts.appendChild(bar)
 
-    const list = el('div', 'gallery')
-    for (const l of net.layouts) {
+    // the user's own layouts first, then the built-in ones by kind of vehicle
+    const groups: [string, Layout[]][] = [['mine', net.layouts.filter((l) => !l.builtin)]]
+    for (const k of ['car', 'truck', 'plane', 'any']) groups.push([`k_${k}`, net.layouts.filter((l) => l.builtin && l.kind === k)])
+    for (const [title, items] of groups) {
+      if (!items.length) continue
+      layouts.appendChild(el('h3', 'shelf', `${t(title)} · ${items.length}`))
+      const list = el('div', 'gallery')
+      layouts.appendChild(list)
+      for (const l of items) drawCard(list, l)
+    }
+    scaleMinis()
+  }
+
+  const drawCard = (list: HTMLElement, l: Layout) => {
+    {
       const card = el('div', 'layout')
       const prev = el('a', 'prev')
       prev.href = `#/edit/${l.id}`
@@ -257,7 +273,6 @@ export function mountHome(root: HTMLElement): () => void {
         }, 'btn danger')
       card.appendChild(btns)
       list.appendChild(card)
-      layouts.appendChild(list)
       // drawn at phone size and scaled down, so the thumbnail looks like the real thing
       const mini = el('div', 'mini')
       prev.appendChild(mini)
@@ -265,7 +280,6 @@ export function mountHome(root: HTMLElement): () => void {
       st.update(SAMPLE[l.kind] || SAMPLE.car)
       stages.push(st)
     }
-    scaleMinis()
   }
 
   const offs = [net.on('state', drawState), net.on('layouts', () => (drawLayouts(), drawState()))]

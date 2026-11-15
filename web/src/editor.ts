@@ -1,6 +1,6 @@
 // Visual layout editor: drag widgets on the grid, pull the corner to resize, edit properties.
 import { CHANNEL, CHANNELS, GROUP_NAMES, type ChannelGroup, type Frame } from '../../src/shared/channels.ts'
-import type { Layout, Widget } from '../../src/shared/types.ts'
+import { FONTS, STYLES, type Layout, type Widget } from '../../src/shared/types.ts'
 import { el, net, pick, t } from './core.ts'
 import { duplicate } from './home.ts'
 import { SAMPLE, Stage } from './stage.ts'
@@ -261,6 +261,16 @@ export function mountEditor(root: HTMLElement, id: string): () => void {
       colors.appendChild(c)
     }
     field(lp, t('colors'), colors)
+    field(lp, t('font'), choice(FONTS.map((f): [string, string] => [f, t(`f_${f}`)]), layout.theme.font || 'sans', (v) => {
+      layout.theme.font = v as Layout['theme']['font']
+      touch()
+      drawStage()
+    }))
+    field(lp, t('pstyle'), choice(STYLES.map((s): [string, string] => [s, t(`s_${s}`)]), layout.theme.style || 'flat', (v) => {
+      layout.theme.style = v as Layout['theme']['style']
+      touch()
+      drawStage()
+    }))
 
     const pv = group(left, t('preview'))
     pv.appendChild(choice([['sample', t('demo')], ['live', t('live')], ['car', t('d_car')], ['truck', t('d_truck')], ['plane', t('d_plane')]], preview, (v) => {

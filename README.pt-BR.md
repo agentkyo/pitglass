@@ -73,6 +73,17 @@ npm run demo         # compila e roda com um carro de corrida falso
 
 ## Layouts
 
+O PitGlass vem com vinte layouts. Escolha um por jogo no painel de controle, ou pela barra no celular.
+
+![Layouts de fábrica](docs/img/layouts.png)
+
+| Para | Layouts |
+| --- | --- |
+| Carros | **Race GT** · **Road car** · **Formula** (display de volante com LEDs de troca) · **Turbo-era formula** (um conta-giros grande e quatro mostradores pequenos) · **Pro datalogger** (painel de injeção programável, com página de largada) · **Classic '60s** (mostradores creme, aros cromados) · **Digital '84** (displays de segmentos) · **Rally** · **Street tuner** · **Night stint** (vermelho no preto) |
+| Caminhões e ônibus | **Truck & bus** · **Classic truck** (analógico) · **Digital cluster** · **Coach** |
+| Aviões | **Glass cockpit** · **Steam gauges** (o "six-pack") · **Airliner** (tela de voo ao lado do mapa) · **Warbird** |
+| Qualquer jogo | **Wheel inputs** · **Standby** |
+
 Abra o painel de controle, escolha um layout e clique em **Duplicar**: os de fábrica são somente leitura, e a cópia é sua para mudar.
 
 ![Editor de layouts](docs/img/editor.jpg)

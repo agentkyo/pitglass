@@ -2,7 +2,7 @@
 // telemetry arrives 30 times a second and the screen is often an old phone.
 import { CHANNEL, type Frame, type Value } from '../../src/shared/channels.ts'
 import type { Widget } from '../../src/shared/types.ts'
-import { channelLabel, el, format, lang, range, tx } from './core.ts'
+import { channelLabel, el, format, lang, range, tx, unitOf } from './core.ts'
 
 export interface Ctx {
   /** true in the editor: buttons do nothing */
@@ -39,6 +39,8 @@ export interface WidgetDef {
 }
 
 const SVG = 'http://www.w3.org/2000/svg'
+/** counter for ids inside SVGs (gradients, clip paths) */
+let uid = 0
 const svg = (tag: string, attrs: Record<string, string | number> = {}, parent?: Element): SVGElement => {
   const e = document.createElementNS(SVG, tag) as SVGElement
   for (const k in attrs) e.setAttribute(k, String(attrs[k]))
@@ -99,7 +101,10 @@ const value: WidgetDef = {
     root.appendChild(head)
     root.appendChild(val)
     const color = str(w, 'color')
-    if (color) val.style.color = color
+    if (color) {
+      val.style.color = color
+      root.style.setProperty('--c', color)
+    }
     const dec = w.p && typeof w.p.dec === 'number' ? (w.p.dec as number) : undefined
     const above = num(w, 'warnAbove', NaN)
     const below = num(w, 'warnBelow', NaN)
@@ -490,11 +495,21 @@ const limit: WidgetDef = {
 
 // ---------------------------------------------------------------- attitude indicator
 const attitude: WidgetDef = {
-  type: 'attitude', name: ['Artificial horizon', 'Horizonte artificial'], w: 10, h: 8, props: [],
-  make() {
-    const root = el('div', 'panel w-attitude')
-    const s = svg('svg', { viewBox: '-100 -70 200 140', preserveAspectRatio: 'xMidYMid slice' })
-    const world = svg('g', {}, s)
+  type: 'attitude', name: ['Artificial horizon', 'Horizonte artificial'], w: 10, h: 8, props: [{ key: 'round', type: 'bool', label: ['Round instrument', 'Instrumento redondo'] }],
+  make(w) {
+    const round = flag(w, 'round')
+    const root = el('div', `panel w-attitude${round ? ' round' : ''}`)
+    const s = svg('svg', round ? { viewBox: '-70 -70 140 140' } : { viewBox: '-100 -70 200 140', preserveAspectRatio: 'xMidYMid slice' })
+    let host: Element = s
+    let sky: SVGElement | null = null
+    if (round) {
+      const ring = chromeId(s)
+      const clip = `pga${++uid}`
+      svg('circle', { r: 66 }, svg('clipPath', { id: clip }, s))
+      host = svg('g', { 'clip-path': `url(#${clip})` }, s)
+      svg('circle', { r: 67.4, fill: 'none', stroke: `url(#${ring})`, 'stroke-width': 3.6 }, s)
+    }
+    const world = svg('g', {}, host)
     const K = 3 // svg units per degree of pitch
     svg('rect', { x: -400, y: -600, width: 800, height: 600, fill: '#1d6fb8' }, world)
     svg('rect', { x: -400, y: 0, width: 800, height: 600, fill: '#7a4a1e' }, world)
@@ -512,6 +527,16 @@ const attitude: WidgetDef = {
     }
     svg('path', { d: 'M-62 0h34l8 9M62 0H28l-8 9', fill: 'none', stroke: '#facc15', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, s)
     svg('rect', { x: -2.5, y: -2.5, width: 5, height: 5, fill: '#facc15' }, s)
+    if (round) {
+      // bank scale: turns with the horizon, read against the fixed pointer
+      sky = svg('g', {}, host)
+      for (const a of [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]) {
+        const r = (a * Math.PI) / 180
+        const inner = a % 30 === 0 ? 54 : 59
+        svg('line', { x1: (66 * Math.sin(r)).toFixed(1), y1: (-66 * Math.cos(r)).toFixed(1), x2: (inner * Math.sin(r)).toFixed(1), y2: (-inner * Math.cos(r)).toFixed(1), stroke: '#fff', 'stroke-width': a === 0 ? 2.4 : 1.4 }, sky)
+      }
+      svg('path', { d: 'M0 -53l-4.5 8h9z', fill: '#facc15' }, s)
+    }
     root.appendChild(s)
     let lp = 999
     let lb = 999
@@ -524,6 +549,7 @@ const attitude: WidgetDef = {
         lp = p
         lb = b
         world.setAttribute('transform', `rotate(${-b}) translate(0 ${p * K})`)
+        if (sky) sky.setAttribute('transform', `rotate(${-b})`)
       }
     }
   }
@@ -720,7 +746,368 @@ const button: WidgetDef = {
   }
 }
 
-export const WIDGETS: WidgetDef[] = [value, gear, rpm, bar, gauge, lamp, text, clock, tyres, limit, attitude, compass, map, button]
+// ---------------------------------------------------------------- analog dial
+/** point on a circle around (50,50); 0° is 12 o'clock, clockwise */
+const at = (deg: number, r: number): [number, number] => {
+  const a = (deg * Math.PI) / 180
+  return [50 + r * Math.sin(a), 50 - r * Math.cos(a)]
+}
+const sweepArc = (a1: number, a2: number, r: number): string => {
+  const [x1, y1] = at(a1, r)
+  const [x2, y2] = at(a2, r)
+  return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 ${a2 - a1 > 180 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`
+}
+/** smallest 1-2-5 step that gives at most `most` divisions */
+export const niceStep = (span: number, most: number): number => {
+  const e = Math.pow(10, Math.floor(Math.log10(span / most) + 1e-9))
+  for (const m of [1, 2, 5]) if (span / (m * e) <= most + 1e-9) return m * e
+  return 10 * e
+}
+/** numbers on a scale drop a factor when they would be long: 7000 rpm reads "7" under "×1000" */
+const scaleDiv = (step: number, hi: number) => (step >= 1000 ? 1000 : step >= 100 && hi >= 1000 ? 100 : 1)
+const trim = (v: number): string => String(Math.round(v * 100) / 100)
+const line = (parent: Element, a: number, r1: number, r2: number, cls: string) => {
+  const [x1, y1] = at(a, r1)
+  const [x2, y2] = at(a, r2)
+  svg('line', { x1: x1.toFixed(2), y1: y1.toFixed(2), x2: x2.toFixed(2), y2: y2.toFixed(2), class: cls }, parent)
+}
+/** gradient for the chrome ring of round instruments; returns its id */
+const chromeId = (s: SVGElement): string => {
+  const id = `pgc${++uid}`
+  const g = svg('linearGradient', { id, x1: 0, y1: 0, x2: 1, y2: 1 }, svg('defs', {}, s))
+  const stops: [number, string][] = [[0, '#f4f6f8'], [0.35, '#8b939c'], [0.6, '#3a4048'], [1, '#c9ced4']]
+  for (const [o, c] of stops) svg('stop', { offset: o, 'stop-color': c }, g)
+  return id
+}
+/** face and ring; the theme style "bezel" shows them, the others keep the square panel */
+const instrument = (cls: string): [HTMLElement, SVGElement] => {
+  const root = el('div', `panel w-dial ${cls}`)
+  const s = svg('svg', { viewBox: '0 0 100 100' })
+  const id = chromeId(s)
+  svg('circle', { cx: 50, cy: 50, r: 47.6, class: 'face' }, s)
+  svg('circle', { cx: 50, cy: 50, r: 48.5, class: 'ring', stroke: `url(#${id})` }, s)
+  root.appendChild(s)
+  return [root, s]
+}
+
+const dial: WidgetDef = {
+  type: 'dial', name: ['Analog dial', 'Mostrador analógico'], w: 7, h: 7, ch: 'num', defCh: 'speed',
+  props: [
+    P_LABEL, { key: 'color', type: 'color', label: ['Needle color', 'Cor do ponteiro'] },
+    { key: 'min', type: 'number', label: ['Minimum', 'Mínimo'] },
+    { key: 'max', type: 'number', label: ['Maximum', 'Máximo'] },
+    { key: 'step', type: 'number', label: ['Number every', 'Número a cada'] },
+    { key: 'redFrom', type: 'number', label: ['Red zone from (0-1)', 'Faixa vermelha a partir de (0-1)'] },
+    { key: 'sweep', type: 'number', label: ['Sweep in degrees', 'Abertura em graus'] },
+    { key: 'marks', type: 'text', label: ['Own marks (E,½,F)', 'Marcas próprias (E,½,F)'] },
+    { key: 'digital', type: 'bool', label: ['Show the number too', 'Mostrar também o número'] }
+  ],
+  make(w) {
+    const [root, s] = instrument('')
+    const compact = Math.min(w.w, w.h) <= 4
+    const sweep = clamp(num(w, 'sweep', 270), 60, 320)
+    const red = num(w, 'redFrom', NaN)
+    const stepProp = num(w, 'step', 0)
+    const marks = str(w, 'marks') ? str(w, 'marks').split(',').map((m) => m.trim()) : []
+    const digital = flag(w, 'digital') && sweep <= 290
+    const scale = svg('g', {}, s)
+    const name = svg('text', { x: 50, y: digital ? 71 : 72, class: 'name' }, s)
+    name.textContent = channelLabel(w).toUpperCase()
+    if (compact) name.setAttribute('font-size', '9')
+    const unit = svg('text', { x: 50, y: 35, class: 'unit' }, s)
+    const val = digital ? svg('text', { x: 50, y: 87, class: 'val' }, s) : null
+    const needle = svg('g', { class: 'needle' }, s)
+    svg('path', { d: compact ? 'M50 9 52.4 50 51.4 60 48.6 60 47.6 50Z' : 'M50 7 51.7 50 51 61 49 61 48.3 50Z' }, needle)
+    if (str(w, 'color')) needle.style.color = str(w, 'color')
+    svg('circle', { cx: 50, cy: 50, r: compact ? 6 : 4.6, class: 'hub' }, s)
+    const dec = w.p && typeof w.p.dec === 'number' ? (w.p.dec as number) : undefined
+    const A = (frac: number) => -sweep / 2 + frac * sweep
+    const numeral = (frac: number, text: string, size: number) => {
+      const [x, y] = at(A(frac), compact ? 28 : 31.5)
+      svg('text', { x: x.toFixed(2), y: (y + size * 0.36).toFixed(2), 'font-size': size }, scale).textContent = text
+    }
+    const build = (min: number, max: number) => {
+      while (scale.firstChild) scale.removeChild(scale.firstChild)
+      if (red > 0 && red < 1) svg('path', { d: sweepArc(A(red), A(1), 44.7), class: 'red' }, scale)
+      if (marks.length > 1) {
+        marks.forEach((m, i) => {
+          const fr = i / (marks.length - 1)
+          line(scale, A(fr), 46.5, 38.5, 'maj')
+          if (i) line(scale, A(fr - 0.5 / (marks.length - 1)), 46.5, 42.5, 'min')
+          if (m) numeral(fr, m, compact ? 14 : 10)
+        })
+        return
+      }
+      const [u, conv] = unitOf(w.ch)
+      const lo = conv(min)
+      const hi = conv(max)
+      const span = hi - lo
+      const step = stepProp > 0 ? stepProp : niceStep(span, compact ? 5 : sweep < 240 || Math.min(w.w, w.h) <= 6 ? 7 : 10)
+      const lead = Math.round(step / Math.pow(10, Math.floor(Math.log10(step) + 1e-9)))
+      const minors = compact ? 2 : lead === 2 ? 4 : 5
+      const div = scaleDiv(step, hi)
+      const first = Math.ceil(lo / step - 1e-9)
+      const last = Math.floor(hi / step + 1e-9)
+      let long = false
+      for (let i = first; i <= last; i++) if (trim((i * step) / div).length > 2) long = true
+      const size = compact ? (long ? 10.5 : 13) : long ? 7.6 : 9.6
+      for (let i = first; i <= last; i++) {
+        const m = i * step
+        line(scale, A((m - lo) / span), 46.5, 38.5, 'maj')
+        numeral((m - lo) / span, trim(m / div), size)
+      }
+      for (let i = first * minors - minors; i <= last * minors + minors; i++) {
+        const m = (i * step) / minors
+        if (i % minors !== 0 && m >= lo - 1e-9 && m <= hi + 1e-9) line(scale, A((m - lo) / span), 46.5, 42.5, 'min')
+      }
+      unit.textContent = div > 1 ? `×${div} ${u}` : u
+    }
+    let bmin = NaN
+    let bmax = NaN
+    let lastA = 999
+    let lastV: Value | undefined = undefined
+    return {
+      el: root,
+      update(f) {
+        const [min, max] = range(w, f)
+        if (min !== bmin || max !== bmax) build((bmin = min), (bmax = max))
+        const raw = w.ch ? f[w.ch] : undefined
+        const v = numOf(raw)
+        const ang = Math.round(A(v === null ? 0 : clamp((v - min) / (max - min), 0, 1)) * 4) / 4
+        if (ang !== lastA) needle.setAttribute('transform', `rotate(${(lastA = ang)} 50 50)`)
+        if (val && raw !== lastV) val.textContent = format(w.ch, (lastV = raw), dec).text
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- altimeter (three pointers)
+const altimeter: WidgetDef = {
+  type: 'altimeter', name: ['Altimeter', 'Altímetro'], w: 6, h: 6, ch: 'num', defCh: 'altitude', props: [],
+  make(w) {
+    const [root, s] = instrument('w-alt')
+    for (let i = 0; i < 50; i++) {
+      line(s, i * 7.2, 46.5, i % 5 === 0 ? 38.5 : 42.5, i % 5 === 0 ? 'maj' : 'min')
+      if (i % 5 === 0) {
+        const [x, y] = at(i * 7.2, 31)
+        svg('text', { x: x.toFixed(2), y: (y + 4.2).toFixed(2), 'font-size': 11.5 }, s).textContent = String(i / 5)
+      }
+    }
+    const n10k = svg('path', { d: 'M50 50V9M47.2 13 50 5.5 52.8 13Z', class: 'n10k' }, s)
+    const n1k = svg('path', { d: 'M50 24 53.6 46 50 57 46.4 46Z', class: 'n1k' }, s)
+    const n100 = svg('path', { d: 'M50 7 51.7 50 51 61 49 61 48.3 50Z', class: 'n100' }, s)
+    // the window sits over the pointers so the exact altitude is always readable
+    svg('rect', { x: 33, y: 62, width: 34, height: 12, rx: 2, class: 'drum' }, s)
+    const val = svg('text', { x: 50, y: 71.4, class: 'val' }, s)
+    svg('circle', { cx: 50, cy: 50, r: 4.6, class: 'hub' }, s)
+    let last: number | null = NaN
+    const turn = (e: SVGElement, frac: number) => e.setAttribute('transform', `rotate(${(Math.round(frac * 1440) / 4) % 360} 50 50)`)
+    return {
+      el: root,
+      update(f) {
+        const v = numOf(w.ch ? f[w.ch] : null)
+        if (v === last) return
+        last = v
+        const a = v === null ? 0 : v
+        val.textContent = v === null ? '–' : String(Math.round(a))
+        turn(n100, (((a % 1000) + 1000) % 1000) / 1000)
+        turn(n1k, (((a % 10000) + 10000) % 10000) / 10000)
+        turn(n10k, clamp(a, 0, 100000) / 100000)
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- heading indicator (compass rose)
+const rose: WidgetDef = {
+  type: 'rose', name: ['Heading indicator', 'Giro direcional'], w: 6, h: 6, ch: 'num', defCh: 'heading', props: [],
+  make(w) {
+    const [root, s] = instrument('w-rose')
+    const card = svg('g', {}, s)
+    for (let d = 0; d < 360; d += 5) {
+      line(card, d, 46.5, d % 10 === 0 ? 39.5 : 43, d % 10 === 0 ? 'maj' : 'min')
+      if (d % 30 === 0) {
+        const [x, y] = at(d, 31.5)
+        const cardinal = CARDINAL[d]
+        const tEl = svg('text', { x: x.toFixed(2), y: (y + (cardinal ? 4.5 : 3.6)).toFixed(2), 'font-size': cardinal ? 12.5 : 10, transform: `rotate(${d} ${x.toFixed(2)} ${y.toFixed(2)})` }, card)
+        tEl.textContent = cardinal || String(d / 10)
+      }
+    }
+    const bug = svg('path', { d: 'M45.5 3.5h9v4.5l-4.5 3.5-4.5-3.5z', class: 'bug' }, card)
+    svg('path', { d: 'M50 10.5 46.6 2.5h6.8z', class: 'lubber' }, s)
+    svg('path', { d: 'M50 33v32M35 50h30M44 63h12', class: 'ship' }, s)
+    let lastH = -999
+    let lastB = -999
+    return {
+      el: root,
+      update(f) {
+        const h = Math.round((numOf(w.ch ? f[w.ch] : null) || 0) * 4) / 4
+        if (h !== lastH) card.setAttribute('transform', `rotate(${-(lastH = h)} 50 50)`)
+        const sel = numOf(f.apHdgSel)
+        const b = sel === null ? -1 : Math.round(sel)
+        if (b !== lastB) {
+          lastB = b
+          bug.style.display = sel === null ? 'none' : ''
+          bug.setAttribute('transform', `rotate(${b} 50 50)`)
+        }
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- seven-segment display
+const SEG = [
+  '2.2,1 7.8,1 6.6,2.7 3.4,2.7', // a top
+  '8.5,1.7 6.8,3.3 6.8,7.8 7.8,8.7 8.5,8', // b top right
+  '8.5,16.3 6.8,14.7 6.8,10.2 7.8,9.3 8.5,10', // c bottom right
+  '2.2,17 7.8,17 6.6,15.3 3.4,15.3', // d bottom
+  '1.5,16.3 3.2,14.7 3.2,10.2 2.2,9.3 1.5,10', // e bottom left
+  '1.5,1.7 3.2,3.3 3.2,7.8 2.2,8.7 1.5,8', // f top left
+  '2.6,9 3.5,8.15 6.5,8.15 7.4,9 6.5,9.85 3.5,9.85' // g middle
+]
+const GLYPH: Record<string, string> = {
+  0: 'abcdef', 1: 'bc', 2: 'abdeg', 3: 'abcdg', 4: 'bcfg', 5: 'acdfg', 6: 'acdefg', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg', '-': 'g', '–': 'g',
+  A: 'abcefg', B: 'cdefg', C: 'adef', D: 'bcdeg', E: 'adefg', F: 'aefg', G: 'acdef', H: 'bcefg', I: 'bc', J: 'bcde', L: 'def', N: 'ceg', O: 'abcdef', P: 'abefg',
+  R: 'eg', S: 'acdfg', T: 'defg', U: 'bcdef', Y: 'bcdfg'
+}
+const PITCH = 11.6
+
+const digits: WidgetDef = {
+  type: 'digits', name: ['Segment display', 'Display de segmentos'], w: 8, h: 4, ch: 'any', defCh: 'speed',
+  props: [
+    P_LABEL, P_COLOR,
+    { key: 'digits', type: 'number', label: ['Digits', 'Dígitos'] },
+    { key: 'dec', type: 'number', label: ['Decimals', 'Casas decimais'] },
+    { key: 'plain', type: 'bool', label: ['No label', 'Sem rótulo'] }
+  ],
+  make(w) {
+    const root = el('div', 'panel w-digits')
+    if (str(w, 'color')) root.style.color = str(w, 'color')
+    const head = flag(w, 'plain') ? null : el('div', 'lbl')
+    const unit = el('span', 'unit')
+    if (head) {
+      head.appendChild(el('span', '', channelLabel(w)))
+      head.appendChild(unit)
+      root.appendChild(head)
+    }
+    const count = clamp(Math.round(num(w, 'digits', 3)), 1, 12)
+    const s = svg('svg', { viewBox: `0 0 ${(count * PITCH + 1.6).toFixed(1)} 18` })
+    const slant = svg('g', { transform: 'translate(1.6 0) skewX(-5)' }, s)
+    const cells: { segs: SVGElement[]; dp: SVGElement; colon: SVGElement; key: string }[] = []
+    for (let i = 0; i < count; i++) {
+      const g = svg('g', { transform: `translate(${(i * PITCH).toFixed(1)} 0)` }, slant)
+      const colon = svg('g', {}, g)
+      svg('circle', { cx: 10.2, cy: 5.8, r: 0.85 }, colon)
+      svg('circle', { cx: 10.2, cy: 12.2, r: 0.85 }, colon)
+      cells.push({ segs: SEG.map((points) => svg('polygon', { points }, g)), dp: svg('circle', { cx: 10.2, cy: 16.1, r: 0.95 }, g), colon, key: ' ' })
+    }
+    root.appendChild(s)
+    const dec = w.p && typeof w.p.dec === 'number' ? (w.p.dec as number) : undefined
+    let last: Value | undefined = undefined
+    let lastUnit = ''
+    const show = (textIn: string) => {
+      // "." and ":" light up beside the digit before them instead of taking a place
+      const keys: string[] = []
+      for (const c of textIn.toUpperCase()) {
+        if ((c === '.' || c === ':') && keys.length && keys[keys.length - 1].length === 1) keys[keys.length - 1] += c
+        else if (c !== '.' && c !== ':') keys.push(c)
+      }
+      const shown = keys.slice(-count)
+      for (let i = 0; i < count; i++) {
+        const key = shown[i - (count - shown.length)] || ' '
+        const cell = cells[i]
+        if (key === cell.key) continue
+        cell.key = key
+        const on = GLYPH[key.charAt(0)] || ''
+        cell.segs.forEach((seg, k) => seg.setAttribute('class', on.indexOf('abcdefg'.charAt(k)) >= 0 ? 'on' : ''))
+        cell.dp.setAttribute('class', key.charAt(1) === '.' ? 'on' : '')
+        cell.colon.setAttribute('class', key.charAt(1) === ':' ? 'on' : '')
+      }
+    }
+    show('')
+    return {
+      el: root,
+      size(_ww, hh) {
+        if (head) head.style.fontSize = `${clamp(hh * 0.16, 9, 15)}px`
+      },
+      update(f) {
+        const v = w.ch ? f[w.ch] : undefined
+        if (v === last) return
+        last = v
+        const o = format(w.ch, v, dec)
+        show(o.text)
+        if (o.unit !== lastUnit) unit.textContent = lastUnit = o.unit
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- bar tachometer with a numbered scale
+const tach: WidgetDef = {
+  type: 'tach', name: ['Bar tachometer', 'Conta-giros em barra'], w: 24, h: 3, ch: 'num', defCh: 'rpm',
+  props: [
+    P_COLOR,
+    { key: 'segments', type: 'number', label: ['Segments', 'Segmentos'] },
+    { key: 'redFrom', type: 'number', label: ['Red zone from (0-1)', 'Faixa vermelha a partir de (0-1)'] },
+    { key: 'curve', type: 'bool', label: ['Rising curve', 'Curva crescente'] },
+    { key: 'max', type: 'number', label: ['Maximum', 'Máximo'] }
+  ],
+  make(w) {
+    const root = el('div', 'panel w-tach')
+    if (str(w, 'color')) root.style.setProperty('--on', str(w, 'color'))
+    const bars = el('div', 'bars')
+    const nums = el('div', 'nums')
+    root.appendChild(bars)
+    root.appendChild(nums)
+    const count = clamp(Math.round(num(w, 'segments', w.w * 2)), 8, 80)
+    const red = num(w, 'redFrom', 0.85)
+    const curve = flag(w, 'curve')
+    const segs: HTMLElement[] = []
+    for (let i = 0; i < count; i++) {
+      const sEl = el('i', i / count >= red ? 'r' : '')
+      if (curve) sEl.style.height = `${(26 + 74 * Math.pow((i + 1) / count, 1.6)).toFixed(1)}%`
+      bars.appendChild(sEl)
+      segs.push(sEl)
+    }
+    const build = (min: number, max: number) => {
+      nums.innerHTML = ''
+      const [, conv] = unitOf(w.ch)
+      const lo = conv(min)
+      const hi = conv(max)
+      const step = niceStep(hi - lo, 10)
+      const div = scaleDiv(step, hi)
+      for (let i = Math.ceil(lo / step - 1e-9); i * step <= hi + 1e-9; i++) {
+        const n = el('span', '', trim((i * step) / div))
+        n.style.left = `${(((i * step - lo) / (hi - lo)) * 100).toFixed(2)}%`
+        nums.appendChild(n)
+      }
+    }
+    let bmin = NaN
+    let bmax = NaN
+    let lit = 0
+    let shift = false
+    return {
+      el: root,
+      size(_ww, hh) {
+        nums.style.fontSize = `${clamp(hh * 0.2, 8, 22)}px`
+      },
+      update(f) {
+        const [min, max] = range(w, f)
+        if (min !== bmin || max !== bmax) build((bmin = min), (bmax = max))
+        const v = numOf(w.ch ? f[w.ch] : null)
+        const n = Math.round((v === null ? 0 : clamp((v - min) / (max - min), 0, 1)) * count)
+        if (n !== lit) {
+          for (let i = Math.min(n, lit); i < Math.max(n, lit); i++) segs[i].classList.toggle('on', i < n)
+          lit = n
+        }
+        const sh = f.shiftLight === true
+        if (sh !== shift) root.classList.toggle('shift', (shift = sh))
+      }
+    }
+  }
+}
+
+export const WIDGETS: WidgetDef[] = [value, digits, gear, rpm, tach, bar, gauge, dial, lamp, text, clock, tyres, limit, attitude, altimeter, rose, compass, map, button]
 export const WIDGET: Record<string, WidgetDef> = {}
 for (const d of WIDGETS) WIDGET[d.type] = d
 

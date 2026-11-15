@@ -27,7 +27,17 @@ export interface Theme {
   text: string
   dim: string
   accent: string
+  /** typeface family; default sans */
+  font?: ThemeFont
+  /** how panels are drawn; default flat */
+  style?: ThemeStyle
 }
+
+export const FONTS = ['sans', 'condensed', 'mono', 'serif'] as const
+export type ThemeFont = (typeof FONTS)[number]
+/** flat = filled panels · outline = framed boxes · bezel = round chrome-ringed instruments · bare = no panels */
+export const STYLES = ['flat', 'outline', 'bezel', 'bare'] as const
+export type ThemeStyle = (typeof STYLES)[number]
 
 export interface Layout {
   /** format version */

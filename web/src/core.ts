@@ -99,6 +99,17 @@ const D: Record<string, [string, string]> = {
   c_text: ['Text', 'Texto'],
   c_dim: ['Labels', 'Rótulos'],
   c_accent: ['Accent', 'Destaque'],
+  font: ['Typeface', 'Fonte'],
+  f_sans: ['Standard', 'Padrão'],
+  f_condensed: ['Condensed', 'Condensada'],
+  f_mono: ['Monospaced', 'Monoespaçada'],
+  f_serif: ['Serif (vintage)', 'Serifada (antiga)'],
+  pstyle: ['Panel style', 'Estilo dos painéis'],
+  s_flat: ['Filled', 'Preenchido'],
+  s_outline: ['Framed', 'Com moldura'],
+  s_bezel: ['Instruments (chrome ring)', 'Instrumentos (aro cromado)'],
+  s_bare: ['No panels', 'Sem painéis'],
+  mine: ['My layouts', 'Meus layouts'],
   widget: ['Widget', 'Widget'],
   noSel: ['Click a widget to edit it. Drag to move, pull the corner to resize.', 'Clique num widget para editar. Arraste para mover, puxe o canto para redimensionar.'],
   channel: ['Shows', 'Mostra'],
@@ -138,6 +149,14 @@ const IMPERIAL: Record<string, [string, (v: number) => number]> = {
   L: ['gal', (v) => v * 0.264172],
   '°C': ['°F', (v) => v * 1.8 + 32],
   bar: ['psi', (v) => v * 14.5038]
+}
+
+/** Display unit of a channel and the conversion from its canonical unit. */
+export function unitOf(ch: string | undefined): [string, (v: number) => number] {
+  const c = ch ? CHANNEL[ch] : null
+  if (c && c.pct) return ['%', (v) => v * 100]
+  const unit = c && c.unit ? c.unit : ''
+  return units === 'imperial' && IMPERIAL[unit] ? IMPERIAL[unit] : [unit, (v) => v]
 }
 
 export function channelLabel(w: Widget): string {

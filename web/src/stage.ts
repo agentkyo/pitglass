@@ -48,8 +48,8 @@ export class Stage {
     this.host = host
     this.layout = layout
     this.page = page
-    const s = (this.el = el('div', 'stage'))
     const th = layout.theme
+    const s = (this.el = el('div', `stage f-${th.font || 'sans'} s-${th.style || 'flat'}`))
     s.style.setProperty('--bg', th.bg)
     s.style.setProperty('--panel', th.panel)
     s.style.setProperty('--text', th.text)

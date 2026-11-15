@@ -42,7 +42,10 @@ export function mountDash(root: HTMLElement, isLocal: boolean): () => void {
   view.appendChild(tools)
   root.appendChild(view)
 
-  let pinned = store.get('pg.pin')
+  // ?layout=<id>&page=<n> in the address opens that layout on this screen, whatever the game (handy for a second screen)
+  const query = new URL(location.href).searchParams
+  const forced = query.get('layout') || ''
+  let pinned = forced || store.get('pg.pin')
   let stage: Stage | null = null
   let sig = ''
   let page = 0
@@ -51,6 +54,7 @@ export function mountDash(root: HTMLElement, isLocal: boolean): () => void {
   let raf = 0
   let toolsTimer = 0
   const pages: Record<string, number> = {}
+  if (forced) pages[forced] = Math.max(0, (Number(query.get('page')) || 1) - 1)
 
   const ctx: Ctx = {
     edit: false,

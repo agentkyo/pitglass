@@ -34,14 +34,23 @@ User layouts are stored in `%APPDATA%\PitGlass\layouts\<id>.json` (`~/.config/pi
 | `id` | lowercase letters, digits and `-`, up to 48 characters. It is the file name. |
 | `kind` | `car`, `truck`, `plane` or `any`: which games the layout was drawn for. Used for the preview data. |
 | `cols`, `rows` | size of the grid (4 to 64 columns, 2 to 64 rows). The grid stretches to fill the screen, so 24 x 12 gives square cells on a 2:1 phone. |
-| `theme` | five colors as `#rrggbb`: background, panels, text, labels and accent |
+| `theme` | five colors as `#rrggbb`: background, panels, text, labels and accent. Two optional fields set the look, see below. |
 | `pages` | 1 to 12 pages. Swipe on the phone to change page. |
 
 Each widget has a position and size in grid cells (`x`, `y`, `w`, `h`), a `type`, usually a channel `ch`, and optional properties in `p`. Widgets should not overlap.
 
 A label or text that starts with `@` is translated by PitGlass (`@fuel`, `@destination`, `@cargo`, `@origin`, `@track`, `@trailer`, `@vehicle`, `@wind`, `@waiting`). Anything else is shown as written.
 
-Which layout opens for which game is a setting in the control panel, not part of the layout.
+Which layout opens for which game is a setting in the control panel, not part of the layout. To open one layout on a screen whatever the game, add it to the address: `http://<pc>:47830/?layout=truck-classic&page=2`.
+
+### Look
+
+| `theme` field | Values |
+| --- | --- |
+| `font` | `sans` (default), `condensed`, `mono`, `serif`. Only fonts already on the device are used, so the phone needs no internet. |
+| `style` | `flat` (default): filled panels. `outline`: black boxes with a thin frame, in the widget's own color when it has one. `bezel`: shaded panels, and dials become round instruments with a chrome ring. `bare`: no panels at all. |
+
+The colors do the rest: a cream `panel` with dark `text` and the `serif` font gives a 1960s instrument; green `text` on black with `mono` gives a 1980s digital dash.
 
 ## Widgets
 
@@ -49,22 +58,33 @@ Which layout opens for which game is a setting in the control panel, not part of
 | `type` | What it is | Channel | Properties (`p`) |
 | --- | --- | --- | --- |
 | `value` | Number | any channel | `label` label; `color` color; `dec` decimals; `warnAbove` alert above; `warnBelow` alert below; `warn` alert when on |
+| `digits` | Segment display | any channel | `label` label; `color` color; `digits` digits; `dec` decimals; `plain` no label |
 | `gear` | Gear | text | `color` color |
 | `rpm` | Shift lights | a number | `segments` segments; `from` starts at (0-1) |
+| `tach` | Bar tachometer | a number | `color` color; `segments` segments; `redFrom` red zone from (0-1); `curve` rising curve; `max` maximum |
 | `bar` | Bar | a number | `label` label; `color` color; `dir` direction (h, v); `min` minimum; `max` maximum; `center` grows from the center |
 | `gauge` | Gauge | a number | `label` label; `color` color; `min` minimum; `max` maximum; `redFrom` red zone from (0-1); `dec` decimals |
+| `dial` | Analog dial | a number | `label` label; `color` needle color; `min` minimum; `max` maximum; `step` number every; `redFrom` red zone from (0-1); `sweep` sweep in degrees; `marks` own marks (e,½,f); `digital` show the number too |
 | `lamp` | Indicator light | on/off | `label` label; `icon` icon (left, right, high, low, park, hazard, beacon, wiper, cruise, fuel, warn, bolt, plane, camera, layers, dot); `color` color; `invert` lit when off |
 | `text` | Text | any channel | `label` label; `text` fixed text; `color` color; `dimText` dim; `bare` no panel |
 | `clock` | Clock | none | `seconds` seconds; `date` date; `color` color |
 | `tyres` | Tyre temperatures | none | none |
 | `limit` | Speed limit sign | a number | none |
-| `attitude` | Artificial horizon | none | none |
+| `attitude` | Artificial horizon | none | `round` round instrument |
+| `altimeter` | Altimeter | a number | none |
+| `rose` | Heading indicator | a number | none |
 | `compass` | Heading tape | a number | `span` degrees visible |
 | `map` | Moving map | none | `zoom` zoom (3-16); `light` light map |
 | `button` | Button | on/off | `label` label; `icon` icon (left, right, high, low, park, hazard, beacon, wiper, cruise, fuel, warn, bolt, plane, camera, layers, dot); `color` color; `app` sends to (msfs, freedock, ambibox, iampcgamer); `action` action (event, page, notify, flash, fx, capture, overlay, tip); `arg` parameter |
 <!-- widgets:end -->
 
 Icons for `lamp` and `button`: `left`, `right`, `high`, `low`, `park`, `hazard`, `beacon`, `wiper`, `cruise`, `fuel`, `warn`, `bolt`, `plane`, `camera`, `layers`, `dot`.
+
+Notes on the instruments:
+
+- `dial` builds its scale from the range: a number every 1, 2 or 5 units, and long numbers drop a factor (7000 rpm reads `7` under `×1000`). `step` is in the unit shown on screen. `marks` replaces the numbers with your own, evenly spaced: `E,½,F` for fuel, `C,,H` for temperature.
+- `digits` shows letters as far as seven segments allow, so a gear reads `n` or `r`. Set `digits` to the longest value you expect (`6` for a lap time).
+- `tach` and `dial` follow the car's rev limit when the game reports one.
 
 A `button` with a channel lights up while that channel is on, so it doubles as an indicator (the autopilot page uses this). What a button may send is listed in [INTEGRATIONS.md](INTEGRATIONS.md#actions-dashboard-buttons).
 

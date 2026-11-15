@@ -73,6 +73,17 @@ npm run demo         # build + run with a fake race car
 
 ## Layouts
 
+Twenty layouts come with PitGlass. Pick one per game in the control panel, or from the toolbar on the phone.
+
+![Built-in layouts](docs/img/layouts.png)
+
+| For | Layouts |
+| --- | --- |
+| Cars | **Race GT** · **Road car** · **Formula** (wheel display with shift LEDs) · **Turbo-era formula** (one big tachometer and four small dials) · **Pro datalogger** (aftermarket ECU dash, with a launch page) · **Classic '60s** (cream dials, chrome rings) · **Digital '84** (segment displays) · **Rally** · **Street tuner** · **Night stint** (red on black) |
+| Trucks and buses | **Truck & bus** · **Classic truck** (analog) · **Digital cluster** · **Coach** |
+| Aircraft | **Glass cockpit** · **Steam gauges** (the six-pack) · **Airliner** (flight display beside the map) · **Warbird** |
+| Any game | **Wheel inputs** · **Standby** |
+
 Open the control panel, pick a layout and press **Duplicate**: the built-in ones are read-only, your copy is yours to change.
 
 ![Layout editor](docs/img/editor.jpg)

@@ -5,7 +5,7 @@ import path from 'node:path'
 import { test } from 'node:test'
 import { CHANNEL, derive, fmtDuration, fmtLap, type Frame } from '../shared/channels.ts'
 import { BUILTIN, DEFAULT_LAYOUT } from '../shared/layouts.ts'
-import { WIDGET } from '../../web/src/widgets.ts'
+import { WIDGET, niceStep } from '../../web/src/widgets.ts'
 import { Hub, diff } from './hub.ts'
 import { decodeAc } from './sources/ac.ts'
 import { decodeScs, fmtGear } from './sources/ets2.ts'
@@ -254,6 +254,21 @@ test('layouts from outside are checked', () => {
   assert.equal(odd.theme.bg, '#05070a')
   assert.equal(odd.theme.accent, '#abc')
   assert.equal(odd.kind, 'any')
+  const styled = cleanLayout({ ...ok, theme: { ...ok.theme, font: 'serif', style: 'bezel' } })
+  assert.equal(styled.theme.font, 'serif')
+  assert.equal(styled.theme.style, 'bezel')
+  const junk = cleanLayout({ ...ok, theme: { ...ok.theme, font: 'x; background:url(evil)', style: 'flat' } })
+  assert.equal(junk.theme.font, undefined)
+  assert.equal(junk.theme.style, undefined)
+})
+
+test('dial scales pick round steps', () => {
+  assert.equal(niceStep(300, 10), 50) // km/h
+  assert.equal(niceStep(8500, 10), 1000) // rpm
+  assert.equal(niceStep(2500, 10), 500) // truck rpm
+  assert.equal(niceStep(140, 10), 20)
+  assert.equal(niceStep(4000, 7), 1000) // vertical speed, -2000 to 2000
+  assert.ok(Math.abs(niceStep(2, 10) - 0.2) < 1e-9) // boost in bar
 })
 
 test('store keeps user layouts and settings, and protects the built-in ones', () => {

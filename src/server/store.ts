@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { BUILTIN } from '../shared/layouts.ts'
-import { DEFAULT_CONFIG, type Config, type Layout } from '../shared/types.ts'
+import { DEFAULT_CONFIG, FONTS, STYLES, type Config, type Layout } from '../shared/types.ts'
 
 export const dataDir = () =>
   process.env.PITGLASS_HOME ??
@@ -30,6 +30,9 @@ export function cleanLayout(raw: unknown): Layout {
   if (!Array.isArray(l.pages) || l.pages.length < 1 || l.pages.length > 12) throw new Error('bad pages')
   const color = (v: unknown, d: string) => (COLOR.test(String(v)) ? String(v) : d)
   const t = (l.theme ?? {}) as Layout['theme']
+  const theme: Layout['theme'] = { bg: color(t.bg, '#05070a'), panel: color(t.panel, '#10151c'), text: color(t.text, '#f1f5f9'), dim: color(t.dim, '#7c8a9c'), accent: color(t.accent, '#38bdf8') }
+  if (FONTS.includes(t.font!) && t.font !== 'sans') theme.font = t.font
+  if (STYLES.includes(t.style!) && t.style !== 'flat') theme.style = t.style
   return {
     pitglass: 1,
     id: l.id,
@@ -38,7 +41,7 @@ export function cleanLayout(raw: unknown): Layout {
     kind: ['car', 'truck', 'plane', 'any'].includes(l.kind) ? l.kind : 'any',
     cols,
     rows,
-    theme: { bg: color(t.bg, '#05070a'), panel: color(t.panel, '#10151c'), text: color(t.text, '#f1f5f9'), dim: color(t.dim, '#7c8a9c'), accent: color(t.accent, '#38bdf8') },
+    theme,
     pages: l.pages.map((p) => {
       if (!Array.isArray(p?.widgets) || p.widgets.length > 80) throw new Error('bad widgets')
       return {

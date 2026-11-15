@@ -22,6 +22,8 @@ function car(t: number): Frame {
     tyreFL: round(84 + 5 * Math.sin(t / 5)), tyreFR: round(87 + 5 * Math.sin(t / 6)), tyreRL: round(79 + 4 * Math.sin(t / 7)), tyreRR: round(81 + 4 * Math.sin(t / 8)),
     tc: !braking && cyc < 0.08, abs: braking && cyc < 0.3, pitLimiter: false,
     airTemp: 18, roadTemp: 27, brakeBias: 56.5,
+    waterTemp: round(91 + 3 * Math.sin(t / 11)), oilTemp: round(104 + 4 * Math.sin(t / 13)), turbo: round(braking ? 0.1 : Math.min(1.4, 0.3 + 1.3 * cyc), 2),
+    blinkL: false, blinkR: false, highBeam: Math.floor(t) % 30 > 26, handbrake: false, oilWarn: false, batteryWarn: false,
     lap: 5 + Math.floor(t / 101.3), lapsTotal: 12, position: 3,
     lapCurrent: fmtLap(lapMs), lapLast: fmtLap(99_038), lapBest: fmtLap(best), bestMs: best,
     inPit: false, sector: Math.min(3, 1 + Math.floor(lapMs / 34_000))
