@@ -41,8 +41,12 @@ const D: Record<string, [string, string]> = {
   s_off: ['waiting', 'aguardando'],
   s_blocked: ['port in use by another app', 'porta em uso por outro app'],
   blockedHelp: [
-    'Another app (FreeDock, SimHub…) already listens on this game\'s UDP port. Close it, or see docs/INTEGRATIONS.md to share the feed.',
-    'Outro app (FreeDock, SimHub…) já escuta a porta UDP deste jogo. Feche-o, ou veja docs/INTEGRATIONS.md para compartilhar o sinal.'
+    'An app that does not share this game\'s UDP port (SimHub…) is listening on it. Close it, or see docs/INTEGRATIONS.md. FreeDock 0.3.1 and newer share the port.',
+    'Um app que não divide a porta UDP deste jogo (SimHub…) está escutando nela. Feche-o, ou veja docs/INTEGRATIONS.md. O FreeDock 0.3.1 ou mais novo divide a porta.'
+  ],
+  secondScreen: [
+    'Second screen: scan the same code on a tablet, tap the screen and pick a map layout (Track map, Truck GPS, Moving map). Each screen keeps its own choice.',
+    'Segunda tela: leia o mesmo código num tablet, toque na tela e escolha um layout de mapa (Track map, Truck GPS, Moving map). Cada tela guarda a própria escolha.'
   ],
   needDll: ['SimConnect.dll not found', 'SimConnect.dll não encontrado'],
   layoutFor: ['Layout', 'Layout'],
@@ -109,6 +113,7 @@ const D: Record<string, [string, string]> = {
   s_outline: ['Framed', 'Com moldura'],
   s_bezel: ['Instruments (chrome ring)', 'Instrumentos (aro cromado)'],
   s_bare: ['No panels', 'Sem painéis'],
+  trackEmpty: ['The map draws itself as you drive', 'O mapa se desenha conforme você anda'],
   mine: ['My layouts', 'Meus layouts'],
   widget: ['Widget', 'Widget'],
   noSel: ['Click a widget to edit it. Drag to move, pull the corner to resize.', 'Clique num widget para editar. Arraste para mover, puxe o canto para redimensionar.'],

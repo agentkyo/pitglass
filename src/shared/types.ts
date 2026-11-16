@@ -105,3 +105,5 @@ export const DEFAULT_CONFIG: Config = { lang: '', units: 'metric', assign: {}, d
 export const PORT = 47830
 /** UDP: MyWheel-style drive state (steer, pedals, gear) from any app, see docs/INTEGRATIONS.md */
 export const DRIVE_PORT = 47831
+/** UDP: the shared copy of a game's telemetry port, see UdpSource and docs/INTEGRATIONS.md */
+export const SHARE_PORTS = { beamng: 47834, motortown: 47835 } as const

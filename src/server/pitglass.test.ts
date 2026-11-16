@@ -10,7 +10,10 @@ import { Hub, diff } from './hub.ts'
 import { decodeAc } from './sources/ac.ts'
 import { decodeScs, fmtGear } from './sources/ets2.ts'
 import type { Source } from './sources/source.ts'
-import { decodeDrive, decodeMotorTown, decodeOutGauge, outGaugeGear } from './sources/udp.ts'
+import dgram from 'node:dgram'
+import { scsToLatLon } from './sources/scsmap.ts'
+import { UdpSource, decodeDrive, decodeMotorTown, decodeOutGauge, outGaugeGear } from './sources/udp.ts'
+import { Trail, readTrackImage, safeName } from './trail.ts'
 import { Store, cleanLayout } from './store.ts'
 
 test('formatters', () => {
@@ -291,6 +294,88 @@ test('store keeps user layouts and settings, and protects the built-in ones', ()
     assert.equal(b.remove('my-race'), true)
     assert.equal(b.remove('race-gt'), false)
     assert.equal(new Store(dir).layouts().length, BUILTIN.length)
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('two apps share one game port: the late one reads the repeated feed', async () => {
+  const port = 47000 + Math.floor(Math.random() * 400) * 2
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+  const first = new UdpSource('a', port, decodeDrive, 2500, port + 1)
+  await wait(150)
+  const late = new UdpSource('b', port, decodeDrive, 2500, port + 1)
+  const game = dgram.createSocket('udp4')
+  try {
+    await wait(250)
+    assert.equal(late.status().state, 'off', 'a taken port is not an error while the feed is shared')
+    game.send(JSON.stringify({ steer: 0.25, throttle: 1 }), port, '127.0.0.1')
+    await wait(250)
+    assert.equal(first.poll(Date.now())?.steer, 0.25)
+    assert.equal(late.poll(Date.now())?.steer, 0.25)
+  } finally {
+    first.stop()
+    late.stop()
+    game.close()
+  }
+})
+
+test('truck world position lands on the real map', () => {
+  const near = (got: [number, number], lat: number, lon: number, tol: number) => assert.ok(Math.abs(got[0] - lat) < tol && Math.abs(got[1] - lon) < tol, `${got} is not near ${lat}, ${lon}`)
+  near(scsToLatLon('ets2', 16660, 4150), 50, 15, 1e-6) // the projection's own origin
+  near(scsToLatLon('ats', 0, 0), 39, -96, 1e-6)
+  near(scsToLatLon('ets2', 0, 0), 50.6, 10.3, 0.2) // central Germany
+  near(scsToLatLon('ets2', -40000, -12000), 51.5, -0.6, 0.5) // Great Britain has its own scale: west of London
+  const f = decodeScs(scsBuffer())!
+  assert.equal(f.heading, 90, 'the game counts counterclockwise: three quarters of a turn is east')
+  assert.equal(f.navDistance, 152)
+  assert.equal(f.navTime, '2h05')
+  assert.ok(typeof f.lat === 'number' && typeof f.lon === 'number')
+})
+
+function scsBuffer(): Buffer {
+  const b = Buffer.alloc(21600)
+  b[0] = 1
+  b.writeDoubleLE(1200.5, 2200)
+  b.writeDoubleLE(-3400, 2216)
+  b.writeDoubleLE(0.75, 2224)
+  b.writeFloatLE(152_000, 1060)
+  b.writeFloatLE(7500, 1064)
+  return b
+}
+
+test('trail: thins the path, breaks it on a teleport, starts over on another track', () => {
+  const t = new Trail()
+  for (let i = 0; i <= 100; i++) t.feed('ac', { track: 'imola', posX: i, posZ: 0 })
+  let d = t.data()
+  assert.equal(d.segs.length, 1)
+  assert.equal(d.segs[0].length / 2, 34, 'one point every 3 m')
+  t.feed('ac', { track: 'imola', posX: 5000, posZ: 0 })
+  assert.equal(t.data().segs.length, 2)
+  t.feed('ac', { track: 'spa', posX: 1, posZ: 1 })
+  d = t.data()
+  assert.equal(d.key, 'ac|spa|')
+  assert.deepEqual(d.segs, [[1, 1]])
+  for (let i = 0; i < 20000; i++) t.feed('ac', { track: 'spa', posX: i * 3, posZ: 0 })
+  d = t.data()
+  assert.ok(d.step > 3 && d.segs.reduce((n, s) => n + s.length / 2, 0) <= 4001, 'a long drive stays small')
+  assert.equal(safeName('ks_nordschleife'), 'ks_nordschleife')
+  assert.equal(safeName('..\\..\\windows'), '')
+  assert.equal(safeName('a/b'), '')
+})
+
+test('track drawing of Assetto Corsa: map.png + data/map.ini', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pitglass-track-'))
+  try {
+    assert.equal(readTrackImage(dir), null)
+    const png = Buffer.alloc(24)
+    png.write('\x89PNG\r\n\x1a\n', 0, 'latin1')
+    png.writeUInt32BE(1543, 16)
+    png.writeUInt32BE(872, 20)
+    fs.writeFileSync(path.join(dir, 'map.png'), png)
+    fs.mkdirSync(path.join(dir, 'data'))
+    fs.writeFileSync(path.join(dir, 'data', 'map.ini'), '[PARAMETERS]\nWIDTH=1543.89\nSCALE_FACTOR=1.2\nX_OFFSET=955.115\nZ_OFFSET=536.043\n')
+    assert.deepEqual(readTrackImage(dir), { file: path.join(dir, 'map.png'), scale: 1.2, x0: -955.115, z0: -536.043, w: 1543, h: 872 })
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
   }

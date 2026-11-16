@@ -18,7 +18,8 @@ Sem app para instalar no celular, sem conta, sem nuvem. É uma página web hospe
 
 - **Um painel, vários jogos.** O layout troca sozinho quando você abre outro jogo.
 - **Totalmente customizável.** Editor visual no navegador: arraste widgets numa grade, redimensione, escolha o que cada um mostra, mude as cores, crie páginas. Layouts são arquivos JSON que você pode compartilhar.
-- **14 widgets**: número, marcha, luzes de troca, barra, mostrador, luz indicadora, texto, relógio, temperatura dos pneus, placa de limite de velocidade, horizonte artificial, fita de proa, mapa móvel e botão de toque.
+- **20 widgets**: números, displays de segmentos, marcha, luzes de troca, conta-giros em barra, barras, mostradores e relógios analógicos, luzes indicadoras, texto, relógio, temperatura dos pneus, placa de limite de velocidade, horizonte artificial, altímetro, giro direcional e fita de proa, mapa móvel, mapa da pista e botões de toque.
+- **Mapas numa segunda tela.** Coloque um tablet ao lado do celular: a pista com a sua posição no Assetto Corsa, um GPS para o caminhão no ETS2/ATS, um mapa móvel para o avião no Flight Simulator.
 - **Botões de toque** que agem no simulador (piloto automático, luzes, trem e flaps no Flight Simulator) e nos apps parceiros.
 - **Português do Brasil e inglês**, unidades métricas ou imperiais.
 - **Feito para celular antigo**: a página é pequena, não usa framework e só redesenha o que mudou.
@@ -31,11 +32,11 @@ Sem app para instalar no celular, sem conta, sem nuvem. É uma página web hospe
 | Assetto Corsa | memória compartilhada do jogo | nada |
 | Assetto Corsa EVO | memória compartilhada do jogo (voltas e posição ainda não são publicadas pelo jogo) | nada |
 | Euro Truck Simulator 2 / American Truck Simulator | memória compartilhada do [scs-sdk-plugin](https://github.com/RenCloud/scs-sdk-plugin) | copiar `scs-telemetry.dll` para `<jogo>\bin\win_x64\plugins` |
-| BeamNG.drive | OutGauge, UDP 4444 | Opções › Outros › Protocolos › ativar OutGauge, 127.0.0.1, porta 4444 |
+| BeamNG.drive | OutGauge, UDP 4444 (dividida com o FreeDock) | Opções › Outros › Protocolos › ativar OutGauge, 127.0.0.1, porta 4444 |
 | Motor Town: Behind the Wheel | saída de telemetria do jogo, UDP 33330 | Opções › Jogabilidade › Telemetry Data Output, 127.0.0.1:33330 |
 | Microsoft Flight Simulator 2020 / 2024 | SimConnect | ter um `SimConnect.dll` no PC (SDK do MSFS, ou o plugin dos painéis Logitech, que traz um) |
 
-> **Situação: 0.1, início.** O painel, o editor e o servidor foram testados com a telemetria de demonstração. Os leitores de jogo são portes de decodificadores que já rodam em hardware real no [FreeDock](https://github.com/agentkyo/freedock) e têm testes automatizados, mas o PitGlass em si ainda não foi usado com todos os jogos acima. Se algum valor parecer errado no seu jogo, abra uma issue.
+> **Situação: 0.2, início.** Usado de verdade com Assetto Corsa e Euro Truck Simulator 2. Os outros leitores de jogo são portes de decodificadores que já rodam em hardware real no [FreeDock](https://github.com/agentkyo/freedock) e têm testes automatizados, mas ainda não foram usados dentro do PitGlass; o mesmo vale para os mapas que entraram na 0.2. Se algum valor parecer errado no seu jogo, abra uma issue.
 
 ## Começando (Windows)
 
@@ -47,7 +48,9 @@ cd pitglass
 PitGlass.cmd
 ```
 
-O `PitGlass.cmd` instala as dependências na primeira vez, compila a página, inicia o servidor e abre o painel de controle em `http://localhost:47830`.
+O `PitGlass.cmd` instala as dependências na primeira vez, compila a página e o `PitGlass.exe`, e o inicia. O PitGlass passa a ficar na **bandeja do sistema** (os ícones ao lado do relógio) e abre o painel de controle em `http://localhost:47830`. Clique com o botão direito no ícone para abrir o painel de controle, reiniciar, **iniciar com o Windows**, criar um atalho na área de trabalho ou sair. Depois disso, abra pelo Menu Iniciar ou com dois cliques no `PitGlass.exe`.
+
+O `PitGlass.exe` é um pequeno lançador compilado no seu PC a partir de [`tray/PitGlassTray.cs`](tray/PitGlassTray.cs), com o compilador de C# que já vem no Windows. Para rodar numa janela de console, use `PitGlass.cmd console`.
 
 ![Painel de controle](docs/img/home.jpg)
 
@@ -73,7 +76,7 @@ npm run demo         # compila e roda com um carro de corrida falso
 
 ## Layouts
 
-O PitGlass vem com vinte layouts. Escolha um por jogo no painel de controle, ou pela barra no celular.
+O PitGlass vem com vinte e três layouts. Escolha um por jogo no painel de controle, ou pela barra no celular.
 
 ![Layouts de fábrica](docs/img/layouts.png)
 
@@ -82,7 +85,14 @@ O PitGlass vem com vinte layouts. Escolha um por jogo no painel de controle, ou 
 | Carros | **Race GT** · **Road car** · **Formula** (display de volante com LEDs de troca) · **Turbo-era formula** (um conta-giros grande e quatro mostradores pequenos) · **Pro datalogger** (painel de injeção programável, com página de largada) · **Classic '60s** (mostradores creme, aros cromados) · **Digital '84** (displays de segmentos) · **Rally** · **Street tuner** · **Night stint** (vermelho no preto) |
 | Caminhões e ônibus | **Truck & bus** · **Classic truck** (analógico) · **Digital cluster** · **Coach** |
 | Aviões | **Glass cockpit** · **Steam gauges** (o "six-pack") · **Airliner** (tela de voo ao lado do mapa) · **Warbird** |
+| Mapas, para uma segunda tela | **Track map** (a pista e onde você está nela) · **Truck GPS** (o caminhão no mapa real, girando com a estrada, com distância e tempo da rota) · **Moving map** (o avião no mapa real) |
 | Qualquer jogo | **Wheel inputs** · **Standby** |
+
+| GPS do caminhão (ETS2 / ATS) | Mapa móvel (Flight Simulator) |
+| --- | --- |
+| ![GPS do caminhão](docs/img/gps.png) | ![Mapa móvel numa segunda tela](docs/img/movingmap.png) |
+
+Cada tela guarda a própria escolha: leia o QR code também no tablet, toque na tela e escolha um mapa ali, enquanto o celular continua no painel. Mais em [docs/LAYOUTS.md](docs/LAYOUTS.md#maps-and-a-second-screen) (em inglês).
 
 Abra o painel de controle, escolha um layout e clique em **Duplicar**: os de fábrica são somente leitura, e a cópia é sua para mudar.
 
@@ -115,10 +125,10 @@ Ele também tem uma pequena API local para as suas ferramentas: `GET /api/teleme
 
 ## Planos
 
-- App empacotado para Windows, com ícone na bandeja e início automático.
+- Instalador para Windows que não precise do Node.js.
+- Outros carros no mapa da pista.
 - Mais jogos: Assetto Corsa Competizione, iRacing, rFactor 2 / Le Mans Ultimate, Forza (data out), X-Plane, DCS.
-- Compartilhar o sinal UDP do BeamNG e do Motor Town com outros apps que escutam a mesma porta.
-- Mapa da pista, delta para a melhor volta, calculadora de combustível por volta.
+- Delta para a melhor volta, calculadora de combustível por volta.
 - Suporte a Linux para os jogos UDP.
 
 ## Desenvolvimento

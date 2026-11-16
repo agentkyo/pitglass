@@ -18,7 +18,8 @@ No app to install on the phone, no account, no cloud. It is a web page hosted by
 
 - **One dashboard, many games.** The layout changes by itself when you open another game.
 - **Fully customizable.** A visual editor in the browser: drag widgets on a grid, resize, pick what each one shows, change colors, add pages. Layouts are plain JSON files you can share.
-- **14 widgets**: number, gear, shift lights, bar, gauge, indicator light, text, clock, tyre temperatures, speed limit sign, artificial horizon, heading tape, moving map and touch button.
+- **20 widgets**: numbers, segment displays, gear, shift lights, bar tachometer, bars, gauges and analog dials, indicator lights, text, clock, tyre temperatures, speed limit sign, artificial horizon, altimeter, heading rose and tape, moving map, track map and touch buttons.
+- **Maps on a second screen.** Put a tablet next to the phone: the track with your position in Assetto Corsa, a GPS for the truck in ETS2/ATS, a moving map for the aircraft in Flight Simulator.
 - **Touch buttons** that act on the sim (autopilot, lights, gear and flaps in Flight Simulator) and on companion apps.
 - **English and Brazilian Portuguese**, metric or imperial units.
 - **Made for old phones**: the page is small, has no framework, and only redraws what changed.
@@ -31,11 +32,11 @@ No app to install on the phone, no account, no cloud. It is a web page hosted by
 | Assetto Corsa | the game's shared memory | nothing |
 | Assetto Corsa EVO | the game's shared memory (laps and position are not published by the game yet) | nothing |
 | Euro Truck Simulator 2 / American Truck Simulator | [scs-sdk-plugin](https://github.com/RenCloud/scs-sdk-plugin) shared memory | copy `scs-telemetry.dll` to `<game>\bin\win_x64\plugins` |
-| BeamNG.drive | OutGauge, UDP 4444 | Options › Other › Protocols › enable OutGauge, 127.0.0.1, port 4444 |
+| BeamNG.drive | OutGauge, UDP 4444 (shared with FreeDock) | Options › Other › Protocols › enable OutGauge, 127.0.0.1, port 4444 |
 | Motor Town: Behind the Wheel | the game's telemetry output, UDP 33330 | Options › Gameplay › Telemetry Data Output, 127.0.0.1:33330 |
 | Microsoft Flight Simulator 2020 / 2024 | SimConnect | have a `SimConnect.dll` on the PC (MSFS SDK, or the Logitech flight panel plugin, which ships one) |
 
-> **Status: 0.1, early.** The dashboard, the editor and the server are tested with the demo telemetry. The game readers are ports of decoders that already run on real hardware in [FreeDock](https://github.com/agentkyo/freedock) and are covered by unit tests, but PitGlass itself has not been driven yet with every game above. If a value looks wrong in your game, please open an issue.
+> **Status: 0.2, early.** Driven for real with Assetto Corsa and Euro Truck Simulator 2. The other game readers are ports of decoders that already run on real hardware in [FreeDock](https://github.com/agentkyo/freedock) and are covered by unit tests, but have not been driven inside PitGlass yet; the same goes for the maps added in 0.2. If a value looks wrong in your game, please open an issue.
 
 ## Quick start (Windows)
 
@@ -47,7 +48,9 @@ cd pitglass
 PitGlass.cmd
 ```
 
-`PitGlass.cmd` installs the dependencies on the first run, builds the page, starts the server and opens the control panel at `http://localhost:47830`.
+`PitGlass.cmd` installs the dependencies on the first run, builds the page and `PitGlass.exe`, and starts it. PitGlass then lives in the **system tray** (the icons next to the clock) and opens the control panel at `http://localhost:47830`. Right-click the tray icon to open the control panel, restart, **start with Windows**, put a shortcut on the desktop, or quit. From then on, start it from the Start menu or by double-clicking `PitGlass.exe`.
+
+`PitGlass.exe` is a small launcher compiled on your PC from [`tray/PitGlassTray.cs`](tray/PitGlassTray.cs) with the C# compiler that ships with Windows. To run in a console window instead, use `PitGlass.cmd console`.
 
 ![Control panel](docs/img/home.jpg)
 
@@ -73,7 +76,7 @@ npm run demo         # build + run with a fake race car
 
 ## Layouts
 
-Twenty layouts come with PitGlass. Pick one per game in the control panel, or from the toolbar on the phone.
+Twenty-three layouts come with PitGlass. Pick one per game in the control panel, or from the toolbar on the phone.
 
 ![Built-in layouts](docs/img/layouts.png)
 
@@ -82,7 +85,14 @@ Twenty layouts come with PitGlass. Pick one per game in the control panel, or fr
 | Cars | **Race GT** · **Road car** · **Formula** (wheel display with shift LEDs) · **Turbo-era formula** (one big tachometer and four small dials) · **Pro datalogger** (aftermarket ECU dash, with a launch page) · **Classic '60s** (cream dials, chrome rings) · **Digital '84** (segment displays) · **Rally** · **Street tuner** · **Night stint** (red on black) |
 | Trucks and buses | **Truck & bus** · **Classic truck** (analog) · **Digital cluster** · **Coach** |
 | Aircraft | **Glass cockpit** · **Steam gauges** (the six-pack) · **Airliner** (flight display beside the map) · **Warbird** |
+| Maps, for a second screen | **Track map** (the circuit and where you are on it) · **Truck GPS** (the truck on the real map, turning with the road, with route distance and time) · **Moving map** (the aircraft on the real map) |
 | Any game | **Wheel inputs** · **Standby** |
+
+| Truck GPS (ETS2 / ATS) | Moving map (Flight Simulator) |
+| --- | --- |
+| ![Truck GPS](docs/img/gps.png) | ![Moving map on a second screen](docs/img/movingmap.png) |
+
+Every screen keeps its own choice: scan the QR code on a tablet too, tap the screen and pick a map there while the phone stays on the dashboard. More in [docs/LAYOUTS.md](docs/LAYOUTS.md#maps-and-a-second-screen).
 
 Open the control panel, pick a layout and press **Duplicate**: the built-in ones are read-only, your copy is yours to change.
 
@@ -115,10 +125,10 @@ It also has a small local API for your own tools: `GET /api/telemetry` returns t
 
 ## Roadmap
 
-- Packaged Windows app with tray icon and autostart.
+- Installer for Windows that does not need Node.js.
+- Other cars on the track map.
 - More games: Assetto Corsa Competizione, iRacing, rFactor 2 / Le Mans Ultimate, Forza (data out), X-Plane, DCS.
-- Share the BeamNG and Motor Town UDP feeds with other apps listening on the same port.
-- Track map, delta to best lap, fuel-per-lap calculator.
+- Delta to best lap, fuel-per-lap calculator.
 - Linux support for the UDP games.
 
 ## Development

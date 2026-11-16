@@ -91,6 +91,7 @@ export function mountHome(root: HTMLElement): () => void {
     const url = el('code', 'url', st.phoneUrl || '')
     info.appendChild(url)
     info.appendChild(el('p', '', t('phoneHelp')))
+    info.appendChild(el('p', 'hint', t('secondScreen')))
     info.appendChild(el('p', 'hint', t('firewall')))
     const open = el('a', 'btn primary', t('openHere'))
     open.href = '#/dash'

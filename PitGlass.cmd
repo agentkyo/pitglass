@@ -1,5 +1,6 @@
 @echo off
-rem PitGlass - double-click to start. Installs and builds on the first run.
+rem PitGlass - double-click to start. Installs and builds on the first run, then lives in the
+rem system tray (PitGlass.exe). "PitGlass.cmd console" runs it in this window instead.
 title PitGlass
 cd /d "%~dp0"
 where node >nul 2>nul
@@ -16,7 +17,14 @@ if not exist node_modules (
 )
 call node scripts\build.mjs
 if errorlevel 1 goto :fail
-node src\server\main.ts --open %*
+if /i "%~1"=="console" goto :console
+if not exist PitGlass.exe call scripts\build-tray.cmd
+if not exist PitGlass.exe goto :console
+start "" PitGlass.exe
+exit /b 0
+
+:console
+node src\server\main.ts --open
 if errorlevel 1 goto :fail
 exit /b 0
 

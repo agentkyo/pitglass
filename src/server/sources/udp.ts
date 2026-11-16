@@ -1,8 +1,9 @@
 // Games that push telemetry over UDP: BeamNG.drive (OutGauge) and Motor Town, plus the generic
 // "drive" feed (steering, pedals and gear read from the wheel itself, MyWheel format).
 //
-// A UDP port has one owner. If another app (FreeDock, SimHub...) already listens on the game's
-// port, the source reports "blocked" and keeps retrying, so it takes over when the port is free.
+// A UDP port has one owner, so the game ports are shared (see UdpSource): the owner repeats the
+// packets on a second port and the app that came late reads them there. Only when both are taken
+// (an app that does not share, like SimHub) does the source report "blocked"; it keeps retrying.
 import dgram from 'node:dgram'
 import type { Frame } from '../../shared/channels.ts'
 import type { SourceStatus } from '../../shared/types.ts'
@@ -101,6 +102,8 @@ export function decodeDrive(p: Buffer): Frame | null {
 
 export class UdpSource implements Source {
   private sock: dgram.Socket | null = null
+  private alt: dgram.Socket | null = null
+  private out: dgram.Socket | null = null
   private frame: Frame | null = null
   private at = 0
   private blocked = false
@@ -109,42 +112,85 @@ export class UdpSource implements Source {
 
   id: string
   private port: number
+  private share: number
   private decode: (p: Buffer) => Frame | null
   private timeoutMs: number
 
-  constructor(id: string, port: number, decode: (p: Buffer) => Frame | null, timeoutMs = 2500) {
+  /**
+   * `share` is the port of the shared feed (0 = none). Whoever owns the game's port repeats every
+   * packet there; whoever finds the game's port taken listens there instead. Two apps that follow
+   * this (PitGlass and FreeDock do) both get the game, whichever started first.
+   */
+  constructor(id: string, port: number, decode: (p: Buffer) => Frame | null, timeoutMs = 2500, share = 0) {
     this.id = id
     this.port = port
+    this.share = share
     this.decode = decode
     this.timeoutMs = timeoutMs
     this.listen()
   }
 
+  private take(msg: Buffer, rinfo: dgram.RemoteInfo) {
+    if (rinfo.address !== '127.0.0.1') return false
+    const f = this.decode(msg)
+    if (!f) return false
+    this.frame = f
+    this.at = Date.now()
+    return true
+  }
+
+  private close(sock: dgram.Socket | null) {
+    try {
+      sock?.close()
+    } catch {
+      /* never bound, or closed already */
+    }
+  }
+
+  /** The game's own port. Taken by another app: fall back to the shared feed and try again later. */
   private listen() {
     if (this.stopped) return
     const sock = dgram.createSocket('udp4')
     sock.on('error', (e: NodeJS.ErrnoException) => {
-      this.blocked = e.code === 'EADDRINUSE' || e.code === 'EACCES'
-      try {
-        sock.close()
-      } catch {
-        /* never bound */
-      }
-      this.sock = null
+      this.close(sock)
+      if (this.sock === sock) this.sock = null
+      const taken = e.code === 'EADDRINUSE' || e.code === 'EACCES'
+      if (taken && this.share) this.listenShared()
+      else this.blocked = taken
       this.retry = setTimeout(() => this.listen(), 5000)
     })
     sock.on('message', (msg, rinfo) => {
-      if (rinfo.address !== '127.0.0.1') return
-      const f = this.decode(msg)
-      if (f) {
-        this.frame = f
-        this.at = Date.now()
-      }
+      if (this.take(msg, rinfo) && this.share) (this.out ??= this.sender()).send(msg, this.share, '127.0.0.1')
     })
     sock.bind(this.port, '127.0.0.1', () => {
       this.blocked = false
       this.sock = sock
+      // we own the port now: the shared feed is ours to send, not to read
+      this.close(this.alt)
+      this.alt = null
     })
+  }
+
+  private listenShared() {
+    if (this.alt || this.stopped) return
+    const alt = dgram.createSocket('udp4')
+    this.alt = alt
+    alt.on('error', () => {
+      this.close(alt)
+      if (this.alt === alt) this.alt = null
+      this.blocked = true
+    })
+    alt.on('message', (msg, rinfo) => this.take(msg, rinfo))
+    alt.bind(this.share, '127.0.0.1', () => {
+      this.blocked = false
+    })
+  }
+
+  private sender() {
+    const out = dgram.createSocket('udp4')
+    out.on('error', () => {})
+    out.unref()
+    return out
   }
 
   poll(now: number): Frame | null {
@@ -159,10 +205,6 @@ export class UdpSource implements Source {
   stop() {
     this.stopped = true
     if (this.retry) clearTimeout(this.retry)
-    try {
-      this.sock?.close()
-    } catch {
-      /* already closed */
-    }
+    for (const s of [this.sock, this.alt, this.out]) this.close(s)
   }
 }

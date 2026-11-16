@@ -64,6 +64,7 @@ export const CHANNELS: ChannelDef[] = [
   t('lapLast', 'race', 'Last lap', 'Última volta'),
   t('lapBest', 'race', 'Best lap', 'Melhor volta'),
   n('sector', 'race', 'Sector', 'Setor', { min: 1, max: 3 }),
+  n('lapProgress', 'race', 'Lap progress', 'Progresso da volta', { min: 0, max: 1, pct: true }),
   b('inPit', 'race', 'In pit lane', 'No pit lane'),
   n('brakeBias', 'race', 'Brake bias', 'Balanço de freio', { unit: '%', min: 40, max: 80, dec: 1 }),
   n('airTemp', 'race', 'Air temp', 'Temp. do ar', { unit: '°C' }),
@@ -90,6 +91,8 @@ export const CHANNELS: ChannelDef[] = [
   t('origin', 'truck', 'Origin', 'Origem'),
   t('destination', 'truck', 'Destination', 'Destino'),
   n('jobDistance', 'truck', 'Job distance', 'Distância da entrega', { unit: 'km' }),
+  n('navDistance', 'truck', 'Route distance', 'Distância da rota', { unit: 'km' }),
+  t('navTime', 'truck', 'Route time', 'Tempo da rota'),
   t('deadline', 'truck', 'Time left', 'Prazo restante'),
   t('restStop', 'truck', 'Next rest', 'Próximo descanso'),
   t('gameClock', 'truck', 'Game time', 'Hora do jogo'),
@@ -141,7 +144,9 @@ export const CHANNELS: ChannelDef[] = [
   t('game', 'info', 'Game', 'Jogo'),
   t('vehicle', 'info', 'Vehicle', 'Veículo'),
   t('track', 'info', 'Track', 'Pista'),
-  b('paused', 'info', 'Paused', 'Pausado')
+  b('paused', 'info', 'Paused', 'Pausado'),
+  n('posX', 'info', 'World position X', 'Posição X no mundo', { unit: 'm', dec: 0 }),
+  n('posZ', 'info', 'World position Z', 'Posição Z no mundo', { unit: 'm', dec: 0 })
 ]
 
 export const CHANNEL: Record<string, ChannelDef> = Object.fromEntries(CHANNELS.map((c) => [c.id, c]))

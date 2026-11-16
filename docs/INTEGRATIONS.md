@@ -10,6 +10,8 @@ PitGlass is a telemetry hub: it reads the game once and gives the same values to
 | 47831 | UDP | 127.0.0.1 | drive feed in (steering, pedals, gear from a wheel app) |
 | 4444 | UDP | 127.0.0.1 | BeamNG OutGauge in |
 | 33330 | UDP | 127.0.0.1 | Motor Town telemetry in |
+| 47834 | UDP | 127.0.0.1 | shared copy of the BeamNG feed (see below) |
+| 47835 | UDP | 127.0.0.1 | shared copy of the Motor Town feed |
 
 Change the HTTP port with `--port`.
 
@@ -61,11 +63,30 @@ Games without telemetry can still show steering, pedals and gear if a wheel app 
 
 `steer` is -1 (left) to 1 (right), pedals 0 to 1, `gear` is a string or `null`. This is the format MyWheel already sends to IAmPcGamer on port 47821, so pointing a second copy of that feed at 47831 is all it takes. When a game is sending telemetry, the feed only fills the channels the game leaves out; with no game, it shows as the game `wheel` and opens the *Wheel inputs* layout.
 
-## BeamNG and Motor Town: one listener per port
+## BeamNG and Motor Town: sharing the port
 
-These games send UDP to a single address, and a UDP port has one owner. If another app (FreeDock, SimHub…) is already listening on 4444 or 33330, PitGlass shows the game as *port in use by another app* and keeps retrying, so it takes over as soon as the port is free. Until the feed can be shared, choose which app gets it by closing the other one, or by pointing the game at a different port for the other app.
+These games send UDP to a single address, and a UDP port has one owner. So that two apps can both follow the game, PitGlass shares the port:
 
-Assetto Corsa, ETS2/ATS and Flight Simulator do not have this limit: shared memory and SimConnect accept any number of readers, so PitGlass and FreeDock read them side by side.
+- The app that binds the game's port (4444 for BeamNG, 33330 for Motor Town) repeats every packet, untouched, to `127.0.0.1` on the shared port: **47834** for BeamNG, **47835** for Motor Town.
+- An app that finds the game's port taken listens on the shared port instead, and tries the game's port again every 5 seconds, so it takes over (and starts repeating) when the owner closes.
+
+PitGlass and [FreeDock](https://github.com/agentkyo/freedock) 0.3.1 and newer both follow this, so it does not matter which one started first. Any other tool can join the same way; with more than two apps, only one can read the shared port.
+
+PitGlass shows *port in use by another app* only when both ports are taken, which means an app that does not share (SimHub, an older FreeDock) owns the game's port. Close it, or point the game at another port for that app.
+
+Assetto Corsa, ETS2/ATS and Flight Simulator do not have this limit: shared memory and SimConnect accept any number of readers.
+
+## Position and the track map
+
+`GET /api/trail` returns the path driven so far in the current game and track, for games that publish a position (`posX`/`posZ`, metres):
+
+```json
+{ "key": "ac|imola|", "step": 3, "segs": [[-417.5, 170.9, -421.5, 171.1]], "image": { "scale": 1.2, "x0": -955.1, "z0": -536, "w": 1543, "h": 872 } }
+```
+
+`segs` are runs of `x, z` pairs at least `step` metres apart; a new run starts after a teleport. For Assetto Corsa, `image` describes the game's own drawing of the track (`map.png` in the track folder), served at `/api/trackmap.png`: pixel `(px, py)` is world `(x0 + px * scale, z0 + py * scale)`.
+
+ETS2 and ATS also publish `lat`/`lon`: the truck's world position turned back into real-world coordinates with the games' own map projection. The game world is about 1:19, so the truck is in the right region and next to the right cities, not on the exact real road.
 
 ## Actions (dashboard buttons)
 

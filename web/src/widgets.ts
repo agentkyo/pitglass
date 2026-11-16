@@ -2,7 +2,7 @@
 // telemetry arrives 30 times a second and the screen is often an old phone.
 import { CHANNEL, type Frame, type Value } from '../../src/shared/channels.ts'
 import type { Widget } from '../../src/shared/types.ts'
-import { channelLabel, el, format, lang, range, tx, unitOf } from './core.ts'
+import { channelLabel, el, format, lang, net, range, t, tx, unitOf } from './core.ts'
 
 export interface Ctx {
   /** true in the editor: buttons do nothing */
@@ -75,6 +75,7 @@ export const ICONS: Record<string, string> = {
   plane: '<path d="M12 2c1 0 1.6 1.2 1.6 3v4l7.4 4.5v2L13.6 13v5l2.4 1.8V21L12 20l-4 1v-1.2L10.400 18v-5L3 15.500v-2L10.400 9V5c0-1.800.600-3 1.600-3z" fill="currentColor" stroke="none"/>',
   camera: '<path d="M3 7h4l1.500-2.500h7L17 7h4v12H3z"/><circle cx="12" cy="13" r="3.500"/>',
   layers: '<path d="m12 3 9 5-9 5-9-5zM3 13l9 5 9-5"/>',
+  arrow: '<path d="M12 2 20 21l-8-4.5L4 21z" fill="currentColor" stroke="none"/>',
   dot: '<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>'
 }
 export const icon = (name: string): string =>
@@ -617,13 +618,20 @@ const TILE = 256
 
 const map: WidgetDef = {
   type: 'map', name: ['Moving map', 'Mapa móvel'], w: 12, h: 10,
-  props: [{ key: 'zoom', type: 'number', label: ['Zoom (3-16)', 'Zoom (3-16)'] }, { key: 'light', type: 'bool', label: ['Light map', 'Mapa claro'] }],
+  props: [
+    { key: 'zoom', type: 'number', label: ['Zoom (3-16)', 'Zoom (3-16)'] },
+    { key: 'light', type: 'bool', label: ['Light map', 'Mapa claro'] },
+    { key: 'rotate', type: 'bool', label: ['Heading up (map turns)', 'Rumo para cima (o mapa gira)'] },
+    { key: 'icon', type: 'select', label: ['Marker', 'Marcador'], options: ['auto', 'plane', 'arrow'] }
+  ],
   make(w, ctx) {
     const root = el('div', `panel w-map${flag(w, 'light') ? '' : ' dark'}`)
+    const spin = el('div', 'spin')
     const pane = el('div', 'pane')
     const ship = el('div', 'ship')
-    ship.innerHTML = icon('plane')
-    root.appendChild(pane)
+    const rotate = flag(w, 'rotate')
+    spin.appendChild(pane)
+    root.appendChild(spin)
     root.appendChild(ship)
     root.appendChild(el('div', 'credit', '© OpenStreetMap'))
     const zoomBox = el('div', 'zoom')
@@ -643,8 +651,10 @@ const map: WidgetDef = {
       const key = `${z}/${Math.floor(fx)}/${Math.floor(fy)}`
       if (key !== last || force) {
         last = key
-        const rx = Math.ceil(bw / 2 / TILE) + 1
-        const ry = Math.ceil(bh / 2 / TILE) + 1
+        // a turning map shows its corners: cover the diagonal
+        const reach = rotate ? Math.hypot(bw, bh) : 0
+        const rx = Math.ceil((reach || bw) / 2 / TILE) + 1
+        const ry = Math.ceil((reach || bh) / 2 / TILE) + 1
         const keep: Record<string, boolean> = {}
         for (let x = Math.floor(fx) - rx; x <= Math.floor(fx) + rx; x++)
           for (let y = Math.floor(fy) - ry; y <= Math.floor(fy) + ry; y++) {
@@ -681,6 +691,7 @@ const map: WidgetDef = {
     }
     root.appendChild(zoomBox)
     let lastHdg = -1
+    let shape = ''
     return {
       el: root,
       size(ww, hh) {
@@ -690,6 +701,9 @@ const map: WidgetDef = {
         draw(true)
       },
       update(f) {
+        const want = str(w, 'icon', 'auto')
+        const pick = want === 'plane' || want === 'arrow' ? want : f.altitude != null ? 'plane' : 'arrow'
+        if (pick !== shape) ship.innerHTML = icon((shape = pick))
         const la = numOf(f.lat)
         const lo = numOf(f.lon)
         if (la !== null && lo !== null && (la !== lat || lo !== lon)) {
@@ -698,7 +712,224 @@ const map: WidgetDef = {
           draw()
         }
         const h = Math.round(numOf(f.heading) || 0)
-        if (h !== lastHdg) ship.style.transform = `translate(-50%,-50%) rotate(${(lastHdg = h)}deg)`
+        if (h !== lastHdg) {
+          lastHdg = h
+          if (rotate) spin.style.transform = `rotate(${-h}deg)`
+          else ship.style.transform = `translate(-50%,-50%) rotate(${h}deg)`
+        }
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- track map
+/** The made-up circuit of the demo car, for the editor preview. */
+const sampleLap = (): number[] => {
+  const pts: number[] = []
+  for (let i = 0; i <= 240; i++) {
+    const a = (i / 240) * Math.PI * 2
+    pts.push(620 * Math.sin(a) + 150 * Math.sin(2 * a) + 60 * Math.sin(5 * a), -330 * Math.cos(a) + 120 * Math.sin(3 * a))
+  }
+  return pts
+}
+
+const track: WidgetDef = {
+  type: 'track', name: ['Track map', 'Mapa da pista'], w: 12, h: 10,
+  props: [
+    P_COLOR,
+    { key: 'line', type: 'color', label: ['Track color', 'Cor da pista'] },
+    { key: 'range', type: 'number', label: ['Follow the vehicle: radius in m (0 = whole track)', 'Seguir o veículo: raio em m (0 = pista inteira)'] }
+  ],
+  make(w, ctx) {
+    const root = el('div', 'panel w-track')
+    const cv = el('canvas')
+    const hint = el('div', 'hint', t('trackEmpty'))
+    root.appendChild(cv)
+    root.appendChild(hint)
+    const g = cv.getContext('2d')
+    const range = Math.max(0, num(w, 'range', 0))
+    let segs: number[][] = []
+    let step = 3
+    let count = 0
+    let image: { el: HTMLImageElement; scale: number; x0: number; z0: number; w: number; h: number } | null = null
+    let key = ''
+    let loading = false
+    let bw = 0
+    let bh = 0
+    let dpr = 1
+    let px = NaN
+    let pz = NaN
+    let lx = NaN
+    let lz = NaN
+    let dir = NaN
+    let drawn = 0
+    let dirty = true
+    let dead = false
+    let again = 0
+
+    const load = () => {
+      if (ctx.edit || loading || dead) return
+      loading = true
+      net
+        .api('GET', '/api/trail')
+        .then((d: any) => {
+          segs = Array.isArray(d.segs) ? d.segs : []
+          step = d.step > 0 ? d.step : 3
+          count = 0
+          for (const s of segs) count += s.length / 2
+          const last = segs.length ? segs[segs.length - 1] : null
+          lx = last ? last[last.length - 2] : NaN
+          lz = last ? last[last.length - 1] : NaN
+          const im = d.image
+          if (!im) image = null
+          else if (!image || image.x0 !== im.x0 || image.w !== im.w) {
+            const pic = new Image()
+            pic.onload = () => (dirty = true)
+            pic.src = `/api/trackmap.png?v=${encodeURIComponent(d.key)}${net.key ? `&k=${encodeURIComponent(net.key)}` : ''}`
+            image = { el: pic, scale: im.scale, x0: im.x0, z0: im.z0, w: im.w, h: im.h }
+          }
+          dirty = true
+        })
+        .catch(() => {})
+        .then(() => (loading = false))
+    }
+
+    const draw = () => {
+      if (!g || !bw) return
+      dirty = false
+      g.setTransform(dpr, 0, 0, dpr, 0, 0)
+      g.clearRect(0, 0, bw, bh)
+      // what to fit: a circle around the vehicle, or everything known
+      let x0 = Infinity
+      let x1 = -Infinity
+      let z0 = Infinity
+      let z1 = -Infinity
+      if (range > 0 && !isNaN(px)) {
+        x0 = px - range
+        x1 = px + range
+        z0 = pz - range
+        z1 = pz + range
+      } else {
+        const pic = image && image.el.complete && image.el.naturalWidth ? image : null
+        if (pic) {
+          x0 = pic.x0
+          z0 = pic.z0
+          x1 = pic.x0 + pic.w * pic.scale
+          z1 = pic.z0 + pic.h * pic.scale
+        }
+        for (const s of segs)
+          for (let i = 0; i < s.length; i += 2) {
+            if (s[i] < x0) x0 = s[i]
+            if (s[i] > x1) x1 = s[i]
+            if (s[i + 1] < z0) z0 = s[i + 1]
+            if (s[i + 1] > z1) z1 = s[i + 1]
+          }
+      }
+      hint.style.display = x1 - x0 > 20 || z1 - z0 > 20 ? 'none' : ''
+      if (!(x1 > x0) && !(z1 > z0)) return
+      const pad = Math.min(bw, bh) * 0.07
+      const k = Math.min((bw - pad * 2) / Math.max(40, x1 - x0), (bh - pad * 2) / Math.max(40, z1 - z0))
+      const ox = bw / 2 - ((x0 + x1) / 2) * k
+      const oz = bh / 2 - ((z0 + z1) / 2) * k
+      const css = getComputedStyle(root)
+      const lineColor = str(w, 'line') || css.getPropertyValue('--text').trim() || '#e5e7eb'
+      const dot = str(w, 'color') || css.getPropertyValue('--accent').trim() || '#38bdf8'
+      const thick = clamp(Math.min(bw, bh) * 0.014, 2, 7)
+      const pic = image && image.el.complete && image.el.naturalWidth ? image : null
+      if (pic) {
+        g.globalAlpha = 0.9
+        g.drawImage(pic.el, pic.x0 * k + ox, pic.z0 * k + oz, pic.w * pic.scale * k, pic.h * pic.scale * k)
+        g.globalAlpha = 1
+      }
+      g.lineJoin = g.lineCap = 'round'
+      g.lineWidth = pic ? thick * 0.5 : thick
+      g.strokeStyle = pic ? dot : lineColor
+      g.globalAlpha = pic ? 0.45 : 1
+      g.beginPath()
+      for (const s of segs) {
+        for (let i = 0; i < s.length; i += 2) i ? g.lineTo(s[i] * k + ox, s[i + 1] * k + oz) : g.moveTo(s[0] * k + ox, s[1] * k + oz)
+      }
+      g.stroke()
+      g.globalAlpha = 1
+      if (isNaN(px)) return
+      const r = clamp(Math.min(bw, bh) * 0.03, 6, 16)
+      g.save()
+      g.translate(px * k + ox, pz * k + oz)
+      g.fillStyle = dot
+      g.strokeStyle = '#000'
+      g.lineWidth = Math.max(1.5, r * 0.22)
+      g.beginPath()
+      if (isNaN(dir)) g.arc(0, 0, r * 0.8, 0, Math.PI * 2)
+      else {
+        g.rotate(dir)
+        g.moveTo(r * 1.5, 0)
+        g.lineTo(-r, r * 0.95)
+        g.lineTo(-r * 0.45, 0)
+        g.lineTo(-r, -r * 0.95)
+        g.closePath()
+      }
+      g.fill()
+      g.stroke()
+      g.restore()
+    }
+
+    if (ctx.edit) {
+      segs = [sampleLap()]
+      px = segs[0][120]
+      pz = segs[0][121]
+      dir = Math.atan2(segs[0][123] - pz, segs[0][122] - px)
+    } else load()
+    return {
+      el: root,
+      size(ww, hh) {
+        bw = ww
+        bh = hh
+        dpr = Math.min(2, window.devicePixelRatio || 1)
+        cv.width = Math.round(ww * dpr)
+        cv.height = Math.round(hh * dpr)
+        cv.style.width = `${ww}px`
+        cv.style.height = `${hh}px`
+        draw()
+      },
+      update(f) {
+        if (ctx.edit) return
+        const now = Date.now()
+        const k = `${f.game ?? ''}|${f.track ?? ''}`
+        if (k !== key) {
+          key = k
+          px = pz = dir = NaN
+          load()
+          // the server looks for the game's own track drawing after the session starts
+          again = now + 4000
+        } else if (again && now > again) {
+          again = 0
+          if (!image) load()
+        }
+        const x = numOf(f.posX)
+        const z = numOf(f.posZ)
+        if (x !== null && z !== null && (x !== px || z !== pz)) {
+          const moved = Math.hypot(x - px, z - pz)
+          if (moved > 0.5 && moved < 400) dir = Math.atan2(z - pz, x - px)
+          px = x
+          pz = z
+          const d = Math.hypot(x - lx, z - lz)
+          if (!(d < step)) {
+            if (!(d < 400) || !segs.length) segs.push([])
+            segs[segs.length - 1].push(x, z)
+            lx = x
+            lz = z
+            // the server keeps a thinned copy: go back to it before this one grows too long
+            if (++count > 6000) load()
+          }
+          dirty = true
+        }
+        if (dirty && now - drawn > 60) {
+          drawn = now
+          draw()
+        }
+      },
+      destroy() {
+        dead = true
       }
     }
   }
@@ -1107,7 +1338,7 @@ const tach: WidgetDef = {
   }
 }
 
-export const WIDGETS: WidgetDef[] = [value, digits, gear, rpm, tach, bar, gauge, dial, lamp, text, clock, tyres, limit, attitude, altimeter, rose, compass, map, button]
+export const WIDGETS: WidgetDef[] = [value, digits, gear, rpm, tach, bar, gauge, dial, lamp, text, clock, tyres, limit, attitude, altimeter, rose, compass, map, track, button]
 export const WIDGET: Record<string, WidgetDef> = {}
 for (const d of WIDGETS) WIDGET[d.type] = d
 

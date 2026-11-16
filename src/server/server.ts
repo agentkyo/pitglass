@@ -15,6 +15,7 @@ import type { Apps } from './apps.ts'
 import type { Hub } from './hub.ts'
 import type { MsfsSource } from './sources/msfs.ts'
 import type { Store } from './store.ts'
+import type { Trail } from './trail.ts'
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -37,6 +38,7 @@ export interface Deps {
   store: Store
   apps: Apps
   msfs: MsfsSource
+  trail: Trail
   webDir: string
   version: string
   port: number
@@ -195,7 +197,14 @@ export class Server {
       if (p === '/api/state') return this.json(res, 200, await this.state(local))
       if (p === '/api/layouts') return this.json(res, 200, store.layouts())
       if (p === '/api/telemetry') return this.json(res, 200, { game: hub.game, data: hub.frame })
-      return this.json(res, 404, { error: 'use /api/state, /api/layouts or /api/telemetry' })
+      if (p === '/api/trail') return this.json(res, 200, this.d.trail.data())
+      if (p === '/api/trackmap.png') {
+        const img = this.d.trail.image
+        if (!img) return this.json(res, 404, { error: 'no track picture for this game' })
+        res.writeHead(200, { 'Content-Type': MIME['.png'], 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' })
+        return void fs.createReadStream(img.file).on('error', () => res.destroy()).pipe(res)
+      }
+      return this.json(res, 404, { error: 'use /api/state, /api/layouts, /api/telemetry or /api/trail' })
     }
     if (!this.sameOrigin(req)) return this.json(res, 403, { error: 'cross-site request refused' })
     // a paired screen may press dashboard buttons; layouts and settings change only on the PC itself

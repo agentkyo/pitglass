@@ -4,6 +4,7 @@
 import { fmtDuration, type Frame } from '../../shared/channels.ts'
 import type { SourceStatus } from '../../shared/types.ts'
 import { SharedMemory, cstr } from '../win32.ts'
+import { scsToLatLon } from './scsmap.ts'
 import { round, type Source } from './source.ts'
 
 const MAP_SIZE = 21600
@@ -20,12 +21,14 @@ const O = {
   speed: 948, engineRpm: 952, userThrottle: 960, userBrake: 964, userClutch: 968,
   cruiseControlSpeed: 988, fuel: 1000, fuelRange: 1008, adblue: 1012,
   oilTemperature: 1020, waterTemperature: 1024,
-  wearEngine: 1036, wearTransmission: 1040, wearCabin: 1044, wearChassis: 1048, wearWheels: 1052,
+  wearEngine: 1036, wearTransmission: 1040, wearCabin: 1044, wearChassis: 1048, wearWheels: 1052, routeDistance: 1060, routeTime: 1064,
   speedLimit: 1068, cargoDamage: 1468,
   parkBrake: 1566, motorBrake: 1567, airPressureWarning: 1568, fuelWarning: 1570,
   wipers: 1577, blinkerLeftOn: 1580, blinkerRightOn: 1581, lightsParking: 1582, lightsBeamLow: 1583,
   lightsBeamHigh: 1584, lightsBeacon: 1585, lightsHazard: 1588, cruiseControl: 1589,
   truckBrand: 2364, truckName: 2492, cargo: 2620, cityDst: 2748, citySrc: 3004,
+  // truck placement, doubles: world x/y/z in metres, then heading/pitch/roll as fractions of a turn
+  coordinateX: 2200, coordinateZ: 2216, rotationX: 2224,
   jobIncome: 4000, onJob: 4300, trailerAttached: 6080
 } as const
 
@@ -42,8 +45,24 @@ export function decodeScs(b: Buffer): Frame | null {
   const limit = f(O.speedLimit) * 3.6
   const wear = Math.max(f(O.wearEngine), f(O.wearTransmission), f(O.wearCabin), f(O.wearChassis), f(O.wearWheels))
   const rest = b.readInt32LE(O.restStop)
+  const game = b.readUInt32LE(O.game) === 2 ? 'ats' : 'ets2'
+  const x = b.readDoubleLE(O.coordinateX)
+  const z = b.readDoubleLE(O.coordinateZ)
+  // (0, 0) is what the plugin holds before a truck exists
+  const placed = isFinite(x) && isFinite(z) && (x !== 0 || z !== 0)
+  const [lat, lon] = placed ? scsToLatLon(game, x, z) : [NaN, NaN]
+  const turn = b.readDoubleLE(O.rotationX)
+  const route = f(O.routeDistance)
   const frame: Frame = {
-    game: b.readUInt32LE(O.game) === 2 ? 'ats' : 'ets2',
+    game,
+    posX: placed ? round(x, 1) : null,
+    posZ: placed ? round(z, 1) : null,
+    lat: isFinite(lat) ? round(lat, 5) : null,
+    lon: isFinite(lon) ? round(lon, 5) : null,
+    // the game counts counterclockwise from north
+    heading: placed && isFinite(turn) ? round((((1 - turn) * 360) % 360 + 360) % 360) : null,
+    navDistance: route > 0 ? round(route / 1000, route < 10000 ? 1 : 0) : null,
+    navTime: route > 0 && f(O.routeTime) > 0 ? fmtDuration(f(O.routeTime) / 60) : '',
     vehicle: `${cstr(b, O.truckBrand, 64)} ${cstr(b, O.truckName, 64)}`.trim(),
     paused: flag(O.paused),
     speed: round(Math.abs(f(O.speed)) * 3.6),

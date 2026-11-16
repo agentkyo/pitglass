@@ -63,6 +63,18 @@ const autopilotPage = (): Page => ({
   ]
 })
 
+/** The truck on the real map, turning with the road, with the route numbers beside it. */
+const gpsWidgets = (): Widget[] => [
+  w('map', 0, 0, 17, 12, undefined, { zoom: 9, rotate: true, icon: 'arrow' }),
+  w('limit', 17, 0, 3, 3, 'speedLimit'),
+  w('value', 20, 0, 4, 3, 'speed', { warn: 'overLimit' }),
+  w('value', 17, 3, 7, 2, 'navDistance'),
+  w('value', 17, 5, 7, 2, 'navTime'),
+  w('text', 17, 7, 7, 2, 'destination', { label: '@destination' }),
+  w('value', 17, 9, 4, 3, 'restStop'),
+  w('value', 21, 9, 3, 3, 'gameClock')
+]
+
 const jobPage = (): Page => ({
   name: 'Job',
   widgets: [
@@ -174,7 +186,8 @@ export const BUILTIN: Layout[] = [
           w('value', 19, 10, 5, 2, 'retarder')
         ]
       },
-      jobPage()
+      jobPage(),
+      { name: 'GPS', widgets: gpsWidgets() }
     ]
   },
   {
@@ -562,6 +575,50 @@ export const BUILTIN: Layout[] = [
           w('value', 12, 8, 4, 4, 'heading', { label: 'HDG', dec: 0 }),
           w('value', 16, 8, 4, 4, 'groundSpeed', { label: 'GS' }),
           w('clock', 20, 8, 4, 4)
+        ]
+      }
+    ]
+  },
+  // ------------------------------------------------------------------ maps, for a second screen
+  {
+    ...base, id: 'map-track', name: 'Track map', kind: 'car', theme: theme('#f43f5e'),
+    pages: [
+      {
+        name: 'Track',
+        widgets: [
+          w('track', 0, 0, 16, 12),
+          w('value', 16, 0, 4, 3, 'position', { label: 'POS' }),
+          w('value', 20, 0, 4, 3, 'lap', { label: 'LAP' }),
+          w('value', 16, 3, 8, 2, 'lapCurrent'),
+          w('value', 16, 5, 8, 2, 'lapLast'),
+          w('value', 16, 7, 8, 2, 'lapBest', { color: PURPLE }),
+          w('gear', 16, 9, 3, 3, 'gear'),
+          w('value', 19, 9, 5, 3, 'speed')
+        ]
+      }
+    ]
+  },
+  {
+    ...base, id: 'map-truck', name: 'Truck GPS', kind: 'truck', theme: theme('#fbbf24'),
+    pages: [
+      { name: 'GPS', widgets: gpsWidgets() },
+      // the same, north up and from further away: where in the country am I
+      { name: 'Overview', widgets: [w('map', 0, 0, 24, 12, undefined, { zoom: 7, icon: 'arrow' })] }
+    ]
+  },
+  {
+    ...base, id: 'map-flight', name: 'Moving map', kind: 'plane', theme: theme('#34d399', '#04080c', '#0d141b'),
+    pages: [
+      {
+        name: 'Map',
+        widgets: [
+          w('map', 0, 0, 24, 10, undefined, { zoom: 10 }),
+          w('value', 0, 10, 4, 2, 'groundSpeed', { label: 'GS' }),
+          w('value', 4, 10, 4, 2, 'altitude', { label: 'ALT' }),
+          w('value', 8, 10, 4, 2, 'heading', { label: 'HDG', dec: 0 }),
+          w('value', 12, 10, 4, 2, 'wpDistance', { label: 'WPT' }),
+          w('value', 16, 10, 4, 2, 'wpEte', { label: 'ETE' }),
+          w('clock', 20, 10, 4, 2)
         ]
       }
     ]

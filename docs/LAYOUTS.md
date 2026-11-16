@@ -65,7 +65,7 @@ The colors do the rest: a cream `panel` with dark `text` and the `serif` font gi
 | `bar` | Bar | a number | `label` label; `color` color; `dir` direction (h, v); `min` minimum; `max` maximum; `center` grows from the center |
 | `gauge` | Gauge | a number | `label` label; `color` color; `min` minimum; `max` maximum; `redFrom` red zone from (0-1); `dec` decimals |
 | `dial` | Analog dial | a number | `label` label; `color` needle color; `min` minimum; `max` maximum; `step` number every; `redFrom` red zone from (0-1); `sweep` sweep in degrees; `marks` own marks (e,½,f); `digital` show the number too |
-| `lamp` | Indicator light | on/off | `label` label; `icon` icon (left, right, high, low, park, hazard, beacon, wiper, cruise, fuel, warn, bolt, plane, camera, layers, dot); `color` color; `invert` lit when off |
+| `lamp` | Indicator light | on/off | `label` label; `icon` icon (left, right, high, low, park, hazard, beacon, wiper, cruise, fuel, warn, bolt, plane, camera, layers, arrow, dot); `color` color; `invert` lit when off |
 | `text` | Text | any channel | `label` label; `text` fixed text; `color` color; `dimText` dim; `bare` no panel |
 | `clock` | Clock | none | `seconds` seconds; `date` date; `color` color |
 | `tyres` | Tyre temperatures | none | none |
@@ -74,8 +74,9 @@ The colors do the rest: a cream `panel` with dark `text` and the `serif` font gi
 | `altimeter` | Altimeter | a number | none |
 | `rose` | Heading indicator | a number | none |
 | `compass` | Heading tape | a number | `span` degrees visible |
-| `map` | Moving map | none | `zoom` zoom (3-16); `light` light map |
-| `button` | Button | on/off | `label` label; `icon` icon (left, right, high, low, park, hazard, beacon, wiper, cruise, fuel, warn, bolt, plane, camera, layers, dot); `color` color; `app` sends to (msfs, freedock, ambibox, iampcgamer); `action` action (event, page, notify, flash, fx, capture, overlay, tip); `arg` parameter |
+| `map` | Moving map | none | `zoom` zoom (3-16); `light` light map; `rotate` heading up (map turns); `icon` marker (auto, plane, arrow) |
+| `track` | Track map | none | `color` color; `line` track color; `range` follow the vehicle: radius in m (0 = whole track) |
+| `button` | Button | on/off | `label` label; `icon` icon (left, right, high, low, park, hazard, beacon, wiper, cruise, fuel, warn, bolt, plane, camera, layers, arrow, dot); `color` color; `app` sends to (msfs, freedock, ambibox, iampcgamer); `action` action (event, page, notify, flash, fx, capture, overlay, tip); `arg` parameter |
 <!-- widgets:end -->
 
 Icons for `lamp` and `button`: `left`, `right`, `high`, `low`, `park`, `hazard`, `beacon`, `wiper`, `cruise`, `fuel`, `warn`, `bolt`, `plane`, `camera`, `layers`, `dot`.
@@ -87,6 +88,16 @@ Notes on the instruments:
 - `tach` and `dial` follow the car's rev limit when the game reports one.
 
 A `button` with a channel lights up while that channel is on, so it doubles as an indicator (the autopilot page uses this). What a button may send is listed in [INTEGRATIONS.md](INTEGRATIONS.md#actions-dashboard-buttons).
+
+## Maps and a second screen
+
+Every screen keeps its own layout choice (tap the screen, pick one in the toolbar), so a tablet can show a map while the phone shows the dashboard. Three built-in layouts are made for that:
+
+- **Track map** (`map-track`): the `track` widget draws the circuit and where you are on it. In Assetto Corsa it uses the game's own drawing of the track; in any game that publishes a position, the map draws itself as you drive (a lap is enough). Set `range` to follow the vehicle with a fixed radius instead of fitting the whole track.
+- **Truck GPS** (`map-truck`): the `map` widget with `rotate` on, so the map turns with the truck, plus speed limit, route distance and time. ETS2 and ATS positions are placed on the real map of Europe / North America: right region and cities, not the exact road (the game world is about 1:19). A second page shows the overview, north up.
+- **Moving map** (`map-flight`): the aircraft on the real map, for Flight Simulator.
+
+The real map is OpenStreetMap and needs internet on the screen that shows it. Other cars on the track are not shown: Assetto Corsa only publishes the player's position.
 
 ## Channels
 
@@ -140,6 +151,7 @@ Values are stored in the units below. With imperial units selected, the page con
 | `lapLast` | Last lap | text |  |
 | `lapBest` | Best lap | text |  |
 | `sector` | Sector | number |  |
+| `lapProgress` | Lap progress | number, 0 to 1 |  |
 | `inPit` | In pit lane | on/off |  |
 | `brakeBias` | Brake bias | number | % |
 | `airTemp` | Air temp | number | °C |
@@ -170,6 +182,8 @@ Values are stored in the units below. With imperial units selected, the page con
 | `origin` | Origin | text |  |
 | `destination` | Destination | text |  |
 | `jobDistance` | Job distance | number | km |
+| `navDistance` | Route distance | number | km |
+| `navTime` | Route time | text |  |
 | `deadline` | Time left | text |  |
 | `restStop` | Next rest | text |  |
 | `gameClock` | Game time | text |  |
@@ -238,6 +252,8 @@ Values are stored in the units below. With imperial units selected, the page con
 | `vehicle` | Vehicle | text |  |
 | `track` | Track | text |  |
 | `paused` | Paused | on/off |  |
+| `posX` | World position X | number | m |
+| `posZ` | World position Z | number | m |
 <!-- channels:end -->
 
 ## Sharing

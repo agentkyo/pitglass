@@ -14,6 +14,8 @@ function car(t: number): Frame {
   const rpm = braking ? 7600 - 3000 * cyc : 4300 + 4050 * cyc ** 1.3
   const lapMs = (t * 1000 + 61_000) % 101_300
   const best = 98_412
+  // a made-up circuit, one lap per lap time
+  const a = (lapMs / 101_300) * Math.PI * 2
   return {
     game: 'ac', vehicle: 'ks_porsche_911_gt3_r_2016', track: 'imola', paused: false,
     throttle: braking ? 0 : Math.min(1, 0.7 + cyc), brake: braking ? 0.85 - 0.5 * cyc : 0, clutch: 0,
@@ -26,6 +28,7 @@ function car(t: number): Frame {
     blinkL: false, blinkR: false, highBeam: Math.floor(t) % 30 > 26, handbrake: false, oilWarn: false, batteryWarn: false,
     lap: 5 + Math.floor(t / 101.3), lapsTotal: 12, position: 3,
     lapCurrent: fmtLap(lapMs), lapLast: fmtLap(99_038), lapBest: fmtLap(best), bestMs: best,
+    lapProgress: round(lapMs / 101_300, 3), posX: round(620 * Math.sin(a) + 150 * Math.sin(2 * a) + 60 * Math.sin(5 * a), 1), posZ: round(-330 * Math.cos(a) + 120 * Math.sin(3 * a), 1),
     inPit: false, sector: Math.min(3, 1 + Math.floor(lapMs / 34_000))
   }
 }
@@ -46,6 +49,9 @@ function truck(t: number): Frame {
     parkLights: true, lowBeam: true, highBeam: Math.floor(t) % 30 > 24, beacon: false, wipers: false,
     trailer: true, truckDamage: 0.03, cargoDamage: 0,
     onJob: true, cargo: 'Tractors', origin: 'Berlin', destination: 'Praha', jobDistance: 352, income: 18450,
+    // out of Berlin on the way to Praha
+    lat: round(52.3 - ((t / 3) % 400) * 0.004, 5), lon: round(13.45 + ((t / 3) % 400) * 0.002, 5), heading: round(152 + 6 * Math.sin(t / 7)),
+    navDistance: round(352 - ((t / 3) % 400) * 0.6), navTime: fmtDuration(300 - ((t / 3) % 400) * 0.5),
     deadline: fmtDuration(410 - t / 3), restStop: fmtDuration(365 - t / 3),
     gameClock: `Tue ${String(Math.floor(clock / 60) % 24).padStart(2, '0')}:${String(clock % 60).padStart(2, '0')}`
   }

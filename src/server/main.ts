@@ -4,7 +4,7 @@ import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { DRIVE_PORT, PORT } from '../shared/types.ts'
+import { DRIVE_PORT, PORT, SHARE_PORTS } from '../shared/types.ts'
 import { Apps } from './apps.ts'
 import { Hub } from './hub.ts'
 import { Server, lanAddresses } from './server.ts'
@@ -14,6 +14,7 @@ import { ScsSource } from './sources/ets2.ts'
 import { MsfsSource } from './sources/msfs.ts'
 import { UdpSource, decodeDrive, decodeMotorTown, decodeOutGauge } from './sources/udp.ts'
 import { Store } from './store.ts'
+import { Trail } from './trail.ts'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const arg = (name: string) => {
@@ -40,14 +41,17 @@ const hub = new Hub(
     new AcSource(),
     new ScsSource(),
     msfs,
-    new UdpSource('beamng', 4444, decodeOutGauge),
-    new UdpSource('motortown', 33330, (p) => decodeMotorTown(p), 3000)
+    new UdpSource('beamng', 4444, decodeOutGauge, 2500, SHARE_PORTS.beamng),
+    new UdpSource('motortown', 33330, (p) => decodeMotorTown(p), 3000, SHARE_PORTS.motortown)
   ],
   new UdpSource('wheel', DRIVE_PORT, decodeDrive, 1500)
 )
 const apps = new Apps()
 const port = Number(arg('port')) || PORT
-const server = new Server({ hub, store, apps, msfs, webDir, version: pkg.version, port })
+const trail = new Trail()
+hub.on('game', () => trail.feed(hub.game, hub.frame))
+hub.on('diff', () => trail.feed(hub.game, hub.frame))
+const server = new Server({ hub, store, apps, msfs, trail, webDir, version: pkg.version, port })
 
 // New best lap: the LED strip flashes purple (Ambibox LED), if the user wants it.
 let best = 0

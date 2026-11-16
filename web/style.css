@@ -139,6 +139,7 @@ button, select, input { font: inherit; color: inherit; }
 .w-compass .mark { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: var(--accent); }
 
 .w-map { background: #0b1016; }
+.w-map .spin { position: absolute; left: 0; top: 0; right: 0; bottom: 0; transform-origin: 50% 50%; will-change: transform; }
 .w-map .pane { position: absolute; left: 0; top: 0; will-change: transform; }
 .w-map .pane img { position: absolute; width: 256px; height: 256px; }
 .w-map.dark .pane img { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.6); }
@@ -147,6 +148,9 @@ button, select, input { font: inherit; color: inherit; }
 .w-map .credit { position: absolute; right: 4px; bottom: 2px; font-size: 9px; color: #cbd5e1; opacity: .7; }
 .w-map .zoom { position: absolute; left: 6px; top: 6px; display: flex; flex-direction: column; }
 .w-map .zoom button { width: 38px; height: 38px; margin-bottom: 4px; border: 0; border-radius: 8px; background: rgba(15, 20, 27, .8); color: #fff; font-size: 22px; font-weight: 700; }
+
+.w-track canvas { position: absolute; left: 0; top: 0; }
+.w-track .hint { position: absolute; left: 8%; right: 8%; top: 50%; transform: translateY(-50%); text-align: center; color: var(--dim); font-size: 14px; }
 
 .w-button { border: 0; display: flex !important; flex-direction: column; align-items: center; justify-content: center; color: var(--text); cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; background: var(--panel); }
 .w-button span { font-weight: 800; letter-spacing: .04em; white-space: nowrap; }
