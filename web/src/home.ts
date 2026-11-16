@@ -1,7 +1,7 @@
 // Control panel, for the PC: pair the phone, pick a layout per game, manage layouts and settings.
 import { GAMES } from '../../src/shared/channels.ts'
 import { DEFAULT_LAYOUT } from '../../src/shared/layouts.ts'
-import type { Config, Layout } from '../../src/shared/types.ts'
+import type { Config, Layout, Theme } from '../../src/shared/types.ts'
 import { el, net, t } from './core.ts'
 import { SAMPLE, Stage } from './stage.ts'
 
@@ -20,6 +20,136 @@ export async function duplicate(l: Layout): Promise<Layout> {
   const saved = await net.api<Layout>('PUT', '/api/layouts', copy)
   await net.loadLayouts()
   return saved
+}
+
+/** Ready-made looks for a blank layout; everything can be changed later in the editor. */
+const LOOKS: [string, Theme][] = [
+  ['Midnight', { bg: '#05070a', panel: '#0f141b', text: '#f1f5f9', dim: '#7c8a9c', accent: '#38bdf8' }],
+  ['Race', { bg: '#000000', panel: '#000000', text: '#ffffff', dim: '#8b95a5', accent: '#f43f5e', font: 'condensed', style: 'outline' }],
+  ['Haulage', { bg: '#090b0a', panel: '#121614', text: '#e9f5e6', dim: '#7f9685', accent: '#fbbf24', style: 'bezel' }],
+  ['Vintage', { bg: '#17110c', panel: '#efe6d0', text: '#1c1917', dim: '#6b5f52', accent: '#c2410c', font: 'serif', style: 'bezel' }],
+  ['Segments', { bg: '#010302', panel: '#04100a', text: '#b9ffdc', dim: '#2f8f66', accent: '#34f5a0', font: 'mono' }],
+  ['Night', { bg: '#000000', panel: '#0c0202', text: '#ff5a4f', dim: '#8a231c', accent: '#ff3b30', font: 'condensed' }],
+  ['Daylight', { bg: '#e7ebf0', panel: '#ffffff', text: '#0f172a', dim: '#64748b', accent: '#2563eb' }]
+]
+
+/** "New layout": a name, the kind of vehicle, and where to start: an empty grid or a copy of any layout. */
+function newLayoutDialog(host: HTMLElement) {
+  const modal = el('div', 'modal')
+  const box = el('div', 'box')
+  modal.appendChild(box)
+  box.appendChild(el('h2', '', t('newLayout')))
+  const fields = el('div', 'fields')
+  const nameL = el('label', '', t('name'))
+  const name = el('input')
+  name.type = 'text'
+  name.maxLength = 60
+  name.value = t('myLayout')
+  nameL.appendChild(name)
+  const kindL = el('label', '', t('kind'))
+  let kind: Layout['kind'] = 'car'
+  const kindSel = select([['car', t('k_car')], ['truck', t('k_truck')], ['plane', t('k_plane')], ['any', t('k_any')]], kind, (v) => {
+    kind = v as Layout['kind']
+    drawStarts()
+  })
+  kindL.appendChild(kindSel)
+  fields.appendChild(nameL)
+  fields.appendChild(kindL)
+  box.appendChild(fields)
+
+  const lookTitle = el('h3', '', t('lookTitle'))
+  const looks = el('div', 'looks')
+  let look = 0
+  LOOKS.forEach(([label, th], i) => {
+    const b = el('button', `look${i === 0 ? ' on' : ''}`, label)
+    b.style.background = th.panel === th.bg ? th.bg : `linear-gradient(135deg, ${th.bg} 50%, ${th.panel} 50%)`
+    b.style.color = th.accent
+    b.onclick = () => {
+      look = i
+      looks.querySelectorAll('.look').forEach((x, j) => x.classList.toggle('on', j === i))
+    }
+    looks.appendChild(b)
+  })
+  box.appendChild(lookTitle)
+  box.appendChild(looks)
+
+  box.appendChild(el('h3', '', t('startFrom')))
+  const starts = el('div', 'starts')
+  box.appendChild(starts)
+  let from = ''
+  let stages: Stage[] = []
+  const drawStarts = () => {
+    stages.forEach((x) => x.destroy())
+    stages = []
+    starts.innerHTML = ''
+    const pick = (id: string, card: HTMLElement) => {
+      from = id
+      starts.querySelectorAll('.start').forEach((x) => x.classList.toggle('on', x === card))
+      lookTitle.style.display = looks.style.display = id ? 'none' : ''
+    }
+    const blank = el('button', `start${from === '' ? ' on' : ''}`)
+    blank.appendChild(el('span', 'prev blank', '+'))
+    blank.appendChild(el('b', '', t('blank')))
+    blank.onclick = () => pick('', blank)
+    starts.appendChild(blank)
+    // layouts drawn for this kind of vehicle; "any game" shows them all
+    const list = net.layouts.filter((l) => l.id !== 'idle' && (kind === 'any' || l.kind === kind || l.kind === 'any'))
+    if (from && !list.some((l) => l.id === from)) pick('', blank)
+    for (const l of list) {
+      const card = el('button', `start${from === l.id ? ' on' : ''}`)
+      const prev = el('span', 'prev')
+      const mini = el('div', 'mini')
+      prev.appendChild(mini)
+      card.appendChild(prev)
+      card.appendChild(el('b', '', l.name))
+      card.onclick = () => pick(l.id, card)
+      starts.appendChild(card)
+      const st = new Stage(mini, l, 0, noop)
+      st.update(SAMPLE[l.kind] || SAMPLE.car)
+      stages.push(st)
+    }
+  }
+
+  const close = () => {
+    stages.forEach((x) => x.destroy())
+    document.removeEventListener('keydown', onKey)
+    if (modal.parentNode) modal.parentNode.removeChild(modal)
+  }
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') close()
+  }
+  const foot = el('div', 'foot')
+  const cancel = el('button', 'btn', t('cancel'))
+  cancel.onclick = close
+  const create = el('button', 'btn primary', t('create'))
+  create.onclick = async () => {
+    const title = name.value.trim().slice(0, 60) || t('myLayout')
+    const base = net.layouts.find((l) => l.id === from)
+    const l: Layout = base
+      ? { ...(JSON.parse(JSON.stringify(base)) as Layout), id: slug(title), name: title, kind, author: '' }
+      : { pitglass: 1, id: slug(title), name: title, kind, cols: 24, rows: 12, theme: { ...LOOKS[look][1] }, pages: [{ name: '1', widgets: [] }] }
+    delete l.builtin
+    delete l.note
+    try {
+      await net.api('PUT', '/api/layouts', l)
+      await net.loadLayouts()
+      close()
+      location.hash = `#/edit/${l.id}`
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'error')
+    }
+  }
+  foot.appendChild(cancel)
+  foot.appendChild(create)
+  box.appendChild(foot)
+  modal.addEventListener('pointerdown', (e) => {
+    if (e.target === modal) close()
+  })
+  document.addEventListener('keydown', onKey)
+  host.appendChild(modal)
+  drawStarts()
+  name.focus()
+  name.select()
 }
 
 const setConfig = (patch: Partial<Config>) => net.api('POST', '/api/config', patch).catch(() => {})
@@ -193,15 +323,7 @@ export function mountHome(root: HTMLElement): () => void {
     body(layouts)
     const bar = el('div', 'bar')
     const add = el('button', 'btn primary', t('newLayout'))
-    add.onclick = async () => {
-      const l: Layout = {
-        pitglass: 1, id: slug('layout'), name: t('newLayout'), kind: 'any', cols: 24, rows: 12,
-        theme: { bg: '#05070a', panel: '#0f141b', text: '#f1f5f9', dim: '#7c8a9c', accent: '#38bdf8' }, pages: [{ name: '1', widgets: [] }]
-      }
-      await net.api('PUT', '/api/layouts', l)
-      await net.loadLayouts()
-      location.hash = `#/edit/${l.id}`
-    }
+    add.onclick = () => newLayoutDialog(view)
     bar.appendChild(add)
     const imp = el('button', 'btn', t('import'))
     const file = el('input')
@@ -249,6 +371,7 @@ export function mountHome(root: HTMLElement): () => void {
       card.appendChild(prev)
       const meta = el('div', 'meta')
       meta.appendChild(el('b', '', l.name))
+      if (l.note) meta.appendChild(el('small', 'note', l.note))
       meta.appendChild(el('small', '', `${t(`k_${l.kind}`)}${l.builtin ? ` · ${t('builtin')}` : ''}${l.pages.length > 1 ? ` · ${l.pages.length} ${t('pages').toLowerCase()}` : ''}`))
       card.appendChild(meta)
       const btns = el('div', 'btns')

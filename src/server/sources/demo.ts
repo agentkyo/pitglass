@@ -43,7 +43,7 @@ function truck(t: number): Frame {
     throttle: 0.42 + 0.1 * Math.sin(t / 4), brake: 0, clutch: 0,
     cruise: 80, cruiseOn: true, speedLimit: Math.floor(t / 40) % 2 ? 90 : 80,
     fuel: round(612 - (t % 900) * 0.05), fuelMax: 900, fuelRange: 1890, fuelWarn: false, adblue: 61,
-    waterTemp: 86, oilTemp: 97, airWarn: false, handbrake: false, engineBrake: Math.floor(t) % 15 < 3,
+    waterTemp: 86, oilTemp: 97, airPressure: 8.4, oilPressure: 4.1, battery: 27.6, brakeTemp: 96, fuelAvg: 31.5, odometer: 184_230 + Math.floor(t / 40), airWarn: false, handbrake: false, engineBrake: Math.floor(t) % 15 < 3,
     retarder: Math.floor(t) % 15 < 3 ? 2 : 0, retarderMax: 4,
     blinkL: sig && Math.floor(t * 2.6) % 2 === 0, blinkR: false, hazard: false,
     parkLights: true, lowBeam: true, highBeam: Math.floor(t) % 30 > 24, beacon: false, wipers: false,

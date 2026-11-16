@@ -36,7 +36,7 @@ Sem app para instalar no celular, sem conta, sem nuvem. É uma página web hospe
 | Motor Town: Behind the Wheel | saída de telemetria do jogo, UDP 33330 | Opções › Jogabilidade › Telemetry Data Output, 127.0.0.1:33330 |
 | Microsoft Flight Simulator 2020 / 2024 | SimConnect | ter um `SimConnect.dll` no PC (SDK do MSFS, ou o plugin dos painéis Logitech, que traz um) |
 
-> **Situação: 0.2, início.** Usado de verdade com Assetto Corsa e Euro Truck Simulator 2. Os outros leitores de jogo são portes de decodificadores que já rodam em hardware real no [FreeDock](https://github.com/agentkyo/freedock) e têm testes automatizados, mas ainda não foram usados dentro do PitGlass; o mesmo vale para os mapas que entraram na 0.2. Se algum valor parecer errado no seu jogo, abra uma issue.
+> **Situação: 0.3, início.** Usado de verdade com Assetto Corsa e Euro Truck Simulator 2. Os outros leitores de jogo são portes de decodificadores que já rodam em hardware real no [FreeDock](https://github.com/agentkyo/freedock) e têm testes automatizados, mas ainda não foram usados dentro do PitGlass; o mesmo vale para os mapas. Se algum valor parecer errado no seu jogo, abra uma issue.
 
 ## Começando (Windows)
 
@@ -76,7 +76,7 @@ npm run demo         # compila e roda com um carro de corrida falso
 
 ## Layouts
 
-O PitGlass vem com vinte e três layouts. Escolha um por jogo no painel de controle, ou pela barra no celular.
+O PitGlass vem com trinta e sete layouts. Escolha um por jogo no painel de controle, ou pela barra no celular.
 
 ![Layouts de fábrica](docs/img/layouts.png)
 
@@ -85,6 +85,8 @@ O PitGlass vem com vinte e três layouts. Escolha um por jogo no painel de contr
 | Carros | **Race GT** · **Road car** · **Formula** (display de volante com LEDs de troca) · **Turbo-era formula** (um conta-giros grande e quatro mostradores pequenos) · **Pro datalogger** (painel de injeção programável, com página de largada) · **Classic '60s** (mostradores creme, aros cromados) · **Digital '84** (displays de segmentos) · **Rally** · **Street tuner** · **Night stint** (vermelho no preto) |
 | Caminhões e ônibus | **Truck & bus** · **Classic truck** (analógico) · **Digital cluster** · **Coach** |
 | Aviões | **Glass cockpit** · **Steam gauges** (o "six-pack") · **Airliner** (tela de voo ao lado do mapa) · **Warbird** |
+| Inspirados em carros reais | **Italia V8** (Ferrari 458 Italia: conta-giros amarelo entre duas telas) · **Twin-turbo '87** (Ferrari F40) · **Five dials** (Porsche 911 GT3) · **Touring car '87** (BMW M3 E30) · **Hachi-roku** (Toyota AE86) · **Multi-function** (Nissan GT-R R35, com a tela de dados dele) · **V10 screen** (Lamborghini Huracán) · **GT3 display** (displays de dados de carros de corrida) |
+| Inspirados em caminhões e ônibus reais | **Swedish twin-dial** (Scania R/S) · **German twin-dial** (Mercedes-Benz Actros) · **Big speedometer** (Volvo FH) · **Screen cockpit** (a geração só de telas) · **Grand tourer coach** (MAN Lion's Coach) · **Rodoviário** (ônibus rodoviários brasileiros sobre chassi Mercedes-Benz O 500) |
 | Mapas, para uma segunda tela | **Track map** (a pista e onde você está nela) · **Truck GPS** (o caminhão no mapa real, girando com a estrada, com distância e tempo da rota) · **Moving map** (o avião no mapa real) |
 | Qualquer jogo | **Wheel inputs** · **Standby** |
 
@@ -92,9 +94,25 @@ O PitGlass vem com vinte e três layouts. Escolha um por jogo no painel de contr
 | --- | --- |
 | ![GPS do caminhão](docs/img/gps.png) | ![Mapa móvel numa segunda tela](docs/img/movingmap.png) |
 
+Os layouts inspirados em veículos reais seguem a disposição, as escalas e as cores de cada painel, desenhados com os widgets do PitGlass. São impressões, não cópias, e o PitGlass não tem vínculo com nenhum desses fabricantes.
+
+| Inspirados em carros reais | Inspirados em caminhões e ônibus reais |
+| --- | --- |
+| ![Layouts inspirados em carros reais](docs/img/real-cars.png) | ![Layouts inspirados em caminhões e ônibus reais](docs/img/real-trucks.png) |
+
 Cada tela guarda a própria escolha: leia o QR code também no tablet, toque na tela e escolha um mapa ali, enquanto o celular continua no painel. Mais em [docs/LAYOUTS.md](docs/LAYOUTS.md#maps-and-a-second-screen) (em inglês).
 
-Abra o painel de controle, escolha um layout e clique em **Duplicar**: os de fábrica são somente leitura, e a cópia é sua para mudar.
+### Crie o seu
+
+Clique em **Novo layout** no painel de controle, dê um nome e comece de uma grade vazia (com um dos visuais prontos) ou de uma cópia de qualquer layout. No editor:
+
+- clique num widget da lista para adicionar; ele cai no primeiro espaço livre. Arraste para mover, puxe o canto para redimensionar;
+- escolha o que ele mostra, a escala, os rótulos e o ícone à direita;
+- dê a qualquer widget **as próprias cores** (painel, texto, rótulos, destaque) por cima das do layout, ou tire o painel dele para sobrepor a outro, como a marcha dentro do conta-giros;
+- mude as cores, a fonte e o estilo dos painéis do layout à esquerda, e crie páginas;
+- **Ctrl+Z / Ctrl+Y** desfazem e refazem, **Ctrl+S** salva, as setas movem, Delete remove.
+
+Os layouts de fábrica são somente leitura: clique em **Duplicar** e a cópia é sua para mudar.
 
 ![Editor de layouts](docs/img/editor.jpg)
 
@@ -145,4 +163,4 @@ O servidor é TypeScript executado direto pelo Node (sem etapa de build). A pág
 
 [MIT](LICENSE). Dados do mapa © contribuidores do [OpenStreetMap](https://www.openstreetmap.org/copyright).
 
-O PitGlass não tem vínculo com nenhuma produtora de jogos. Os nomes dos jogos são marcas de seus donos.
+O PitGlass não tem vínculo com nenhuma produtora de jogos nem fabricante de veículos. Nomes de jogos, marcas e modelos pertencem a seus donos e aparecem só para dizer em que cada layout foi inspirado.

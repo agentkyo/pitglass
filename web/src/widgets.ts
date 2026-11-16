@@ -1029,7 +1029,10 @@ const dial: WidgetDef = {
     { key: 'max', type: 'number', label: ['Maximum', 'Máximo'] },
     { key: 'step', type: 'number', label: ['Number every', 'Número a cada'] },
     { key: 'redFrom', type: 'number', label: ['Red zone from (0-1)', 'Faixa vermelha a partir de (0-1)'] },
+    { key: 'greenFrom', type: 'number', label: ['Green band from (0-1)', 'Faixa verde de (0-1)'] },
+    { key: 'greenTo', type: 'number', label: ['Green band to (0-1)', 'Faixa verde até (0-1)'] },
     { key: 'sweep', type: 'number', label: ['Sweep in degrees', 'Abertura em graus'] },
+    { key: 'turn', type: 'number', label: ['Turn the scale (degrees)', 'Girar a escala (graus)'] },
     { key: 'marks', type: 'text', label: ['Own marks (E,½,F)', 'Marcas próprias (E,½,F)'] },
     { key: 'digital', type: 'bool', label: ['Show the number too', 'Mostrar também o número'] }
   ],
@@ -1038,6 +1041,8 @@ const dial: WidgetDef = {
     const compact = Math.min(w.w, w.h) <= 4
     const sweep = clamp(num(w, 'sweep', 270), 60, 320)
     const red = num(w, 'redFrom', NaN)
+    const green = [clamp(num(w, 'greenFrom', NaN), 0, 1), clamp(num(w, 'greenTo', NaN), 0, 1)]
+    const turn = clamp(num(w, 'turn', 0), -180, 180)
     const stepProp = num(w, 'step', 0)
     const marks = str(w, 'marks') ? str(w, 'marks').split(',').map((m) => m.trim()) : []
     const digital = flag(w, 'digital') && sweep <= 290
@@ -1052,7 +1057,7 @@ const dial: WidgetDef = {
     if (str(w, 'color')) needle.style.color = str(w, 'color')
     svg('circle', { cx: 50, cy: 50, r: compact ? 6 : 4.6, class: 'hub' }, s)
     const dec = w.p && typeof w.p.dec === 'number' ? (w.p.dec as number) : undefined
-    const A = (frac: number) => -sweep / 2 + frac * sweep
+    const A = (frac: number) => turn - sweep / 2 + frac * sweep
     const numeral = (frac: number, text: string, size: number) => {
       const [x, y] = at(A(frac), compact ? 28 : 31.5)
       svg('text', { x: x.toFixed(2), y: (y + size * 0.36).toFixed(2), 'font-size': size }, scale).textContent = text
@@ -1060,6 +1065,7 @@ const dial: WidgetDef = {
     const build = (min: number, max: number) => {
       while (scale.firstChild) scale.removeChild(scale.firstChild)
       if (red > 0 && red < 1) svg('path', { d: sweepArc(A(red), A(1), 44.7), class: 'red' }, scale)
+      if (green[1] > green[0]) svg('path', { d: sweepArc(A(green[0]), A(green[1]), 44.7), class: 'green' }, scale)
       if (marks.length > 1) {
         marks.forEach((m, i) => {
           const fr = i / (marks.length - 1)

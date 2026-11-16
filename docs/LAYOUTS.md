@@ -36,8 +36,23 @@ User layouts are stored in `%APPDATA%\PitGlass\layouts\<id>.json` (`~/.config/pi
 | `cols`, `rows` | size of the grid (4 to 64 columns, 2 to 64 rows). The grid stretches to fill the screen, so 24 x 12 gives square cells on a 2:1 phone. |
 | `theme` | five colors as `#rrggbb`: background, panels, text, labels and accent. Two optional fields set the look, see below. |
 | `pages` | 1 to 12 pages. Swipe on the phone to change page. |
+| `note` | optional line shown under the name in the gallery (what inspired it, what it is for). |
 
-Each widget has a position and size in grid cells (`x`, `y`, `w`, `h`), a `type`, usually a channel `ch`, and optional properties in `p`. Widgets should not overlap.
+Each widget has a position and size in grid cells (`x`, `y`, `w`, `h`), a `type`, usually a channel `ch`, and optional properties in `p`. Widgets are drawn in the order they are listed, so a later one sits on top of an earlier one.
+
+### Colors of one widget
+
+Every widget type accepts these properties, on top of its own. They replace the layout's theme inside that widget only:
+
+| Property | Replaces |
+| --- | --- |
+| `uiPanel` | the panel (and dial face) color |
+| `uiText` | numbers and text |
+| `uiDim` | labels and units |
+| `uiAccent` | the accent (needles, bars, highlights) |
+| `uiBare` | `true` removes the panel behind the widget, so it can be laid over another one: the gear inside a tachometer, a number inside a dial |
+
+A yellow tachometer with black numbers is `"p": { "uiPanel": "#ffd60a", "uiText": "#111111" }`. In the editor these are under *Colors of this widget*, with *To front* / *To back* for the order.
 
 A label or text that starts with `@` is translated by PitGlass (`@fuel`, `@destination`, `@cargo`, `@origin`, `@track`, `@trailer`, `@vehicle`, `@wind`, `@waiting`). Anything else is shown as written.
 
@@ -64,7 +79,7 @@ The colors do the rest: a cream `panel` with dark `text` and the `serif` font gi
 | `tach` | Bar tachometer | a number | `color` color; `segments` segments; `redFrom` red zone from (0-1); `curve` rising curve; `max` maximum |
 | `bar` | Bar | a number | `label` label; `color` color; `dir` direction (h, v); `min` minimum; `max` maximum; `center` grows from the center |
 | `gauge` | Gauge | a number | `label` label; `color` color; `min` minimum; `max` maximum; `redFrom` red zone from (0-1); `dec` decimals |
-| `dial` | Analog dial | a number | `label` label; `color` needle color; `min` minimum; `max` maximum; `step` number every; `redFrom` red zone from (0-1); `sweep` sweep in degrees; `marks` own marks (e,½,f); `digital` show the number too |
+| `dial` | Analog dial | a number | `label` label; `color` needle color; `min` minimum; `max` maximum; `step` number every; `redFrom` red zone from (0-1); `greenFrom` green band from (0-1); `greenTo` green band to (0-1); `sweep` sweep in degrees; `turn` turn the scale (degrees); `marks` own marks (e,½,f); `digital` show the number too |
 | `lamp` | Indicator light | on/off | `label` label; `icon` icon (left, right, high, low, park, hazard, beacon, wiper, cruise, fuel, warn, bolt, plane, camera, layers, arrow, dot); `color` color; `invert` lit when off |
 | `text` | Text | any channel | `label` label; `text` fixed text; `color` color; `dimText` dim; `bare` no panel |
 | `clock` | Clock | none | `seconds` seconds; `date` date; `color` color |
@@ -136,6 +151,10 @@ Values are stored in the units below. With imperial units selected, the page con
 | `waterTemp` | Water temp | number | °C |
 | `oilTemp` | Oil temp | number | °C |
 | `turbo` | Boost | number | bar |
+| `fuelAvg` | Average consumption | number | L/100km |
+| `oilPressure` | Oil pressure | number | bar |
+| `battery` | Battery | number | V |
+| `odometer` | Odometer | number | km |
 | `fuelWarn` | Low fuel | on/off |  |
 | `oilWarn` | Oil warning | on/off |  |
 | `batteryWarn` | Battery warning | on/off |  |
@@ -173,6 +192,8 @@ Values are stored in the units below. With imperial units selected, the page con
 | `retarderMax` | Retarder steps | number |  |
 | `engineBrake` | Engine brake | on/off |  |
 | `adblue` | AdBlue | number | L |
+| `airPressure` | Brake air pressure | number | bar |
+| `brakeTemp` | Brake temperature | number | °C |
 | `airWarn` | Air pressure warning | on/off |  |
 | `truckDamage` | Vehicle damage | number, 0 to 1 |  |
 | `cargoDamage` | Cargo damage | number, 0 to 1 |  |

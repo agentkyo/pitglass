@@ -1,6 +1,6 @@
 // Draws one page of a layout into an element and keeps it fed with telemetry.
 import type { Frame } from '../../src/shared/channels.ts'
-import type { Layout, Widget } from '../../src/shared/types.ts'
+import { UI_COLORS, type Layout, type Widget } from '../../src/shared/types.ts'
 import { el } from './core.ts'
 import { WIDGET, type Ctx, type Inst } from './widgets.ts'
 
@@ -14,7 +14,7 @@ export const SAMPLE: Record<string, Frame> = {
   },
   truck: {
     game: 'ets2', vehicle: 'Scania S', speed: 84, rpm: 1180, rpmMax: 2500, rpmPct: 0.47, gear: '12', throttle: 0.4, brake: 0, cruise: 80, cruiseOn: true, speedLimit: 80, overLimit: true,
-    fuel: 612, fuelMax: 900, fuelPct: 0.68, fuelRange: 1890, adblue: 61, waterTemp: 86, oilTemp: 97, retarder: 2, retarderMax: 4, engineBrake: true,
+    fuel: 612, fuelMax: 900, fuelPct: 0.68, fuelRange: 1890, adblue: 61, waterTemp: 86, oilTemp: 97, airPressure: 8.4, oilPressure: 4.1, battery: 27.6, brakeTemp: 96, fuelAvg: 31.5, odometer: 184230, retarder: 2, retarderMax: 4, engineBrake: true,
     blinkL: true, blinkR: false, lowBeam: true, highBeam: false, beacon: false, wipers: false, handbrake: false, airWarn: false, fuelWarn: false, trailer: true,
     truckDamage: 0.03, cargoDamage: 0, onJob: true, cargo: 'Tractors', origin: 'Berlin', destination: 'Praha', jobDistance: 352, income: 18450,
     deadline: '6h50', restStop: '6h05', gameClock: 'Tue 08:14'
@@ -59,7 +59,12 @@ export class Stage {
     for (const w of pg ? pg.widgets : []) {
       const def = WIDGET[w.type]
       if (!def) continue
-      const box = el('div', 'w')
+      const box = el('div', w.p && w.p.uiBare === true ? 'w bare' : 'w')
+      // a widget's own colors replace the theme's inside its box
+      for (const k in UI_COLORS) {
+        const c = w.p ? w.p[k] : undefined
+        if (typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c)) box.style.setProperty(`--${UI_COLORS[k as keyof typeof UI_COLORS]}`, c)
+      }
       box.style.left = `${(w.x / layout.cols) * 100}%`
       box.style.top = `${(w.y / layout.rows) * 100}%`
       box.style.width = `${(w.w / layout.cols) * 100}%`

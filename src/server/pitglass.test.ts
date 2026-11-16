@@ -234,6 +234,8 @@ test('built-in layouts are valid and only use known widgets and channels', () =>
         if (w.ch) assert.ok(CHANNEL[w.ch], `${l.id}: unknown channel ${w.ch}`)
         if (typeof w.p?.warn === 'string') assert.ok(CHANNEL[w.p.warn], `${l.id}: unknown channel ${w.p.warn}`)
         assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= l.cols && w.y + w.h <= l.rows, `${l.id}/${p.name}: ${w.type} at ${w.x},${w.y} is off the grid`)
+        // a widget without a panel may sit on top of another one (the gear inside a tachometer)
+        if (w.p?.uiBare === true) continue
         for (let x = w.x; x < w.x + w.w; x++)
           for (let y = w.y; y < w.y + w.h; y++) {
             assert.ok(!cells.has(`${x},${y}`), `${l.id}/${p.name}: widgets overlap at ${x},${y}`)
@@ -260,6 +262,8 @@ test('layouts from outside are checked', () => {
   const styled = cleanLayout({ ...ok, theme: { ...ok.theme, font: 'serif', style: 'bezel' } })
   assert.equal(styled.theme.font, 'serif')
   assert.equal(styled.theme.style, 'bezel')
+  const noted = cleanLayout({ ...ok, note: 'n'.repeat(500) })
+  assert.equal(noted.note?.length, 120)
   const junk = cleanLayout({ ...ok, theme: { ...ok.theme, font: 'x; background:url(evil)', style: 'flat' } })
   assert.equal(junk.theme.font, undefined)
   assert.equal(junk.theme.style, undefined)

@@ -36,7 +36,7 @@ No app to install on the phone, no account, no cloud. It is a web page hosted by
 | Motor Town: Behind the Wheel | the game's telemetry output, UDP 33330 | Options › Gameplay › Telemetry Data Output, 127.0.0.1:33330 |
 | Microsoft Flight Simulator 2020 / 2024 | SimConnect | have a `SimConnect.dll` on the PC (MSFS SDK, or the Logitech flight panel plugin, which ships one) |
 
-> **Status: 0.2, early.** Driven for real with Assetto Corsa and Euro Truck Simulator 2. The other game readers are ports of decoders that already run on real hardware in [FreeDock](https://github.com/agentkyo/freedock) and are covered by unit tests, but have not been driven inside PitGlass yet; the same goes for the maps added in 0.2. If a value looks wrong in your game, please open an issue.
+> **Status: 0.3, early.** Driven for real with Assetto Corsa and Euro Truck Simulator 2. The other game readers are ports of decoders that already run on real hardware in [FreeDock](https://github.com/agentkyo/freedock) and are covered by unit tests, but have not been driven inside PitGlass yet; the same goes for the maps. If a value looks wrong in your game, please open an issue.
 
 ## Quick start (Windows)
 
@@ -76,7 +76,7 @@ npm run demo         # build + run with a fake race car
 
 ## Layouts
 
-Twenty-three layouts come with PitGlass. Pick one per game in the control panel, or from the toolbar on the phone.
+Thirty-seven layouts come with PitGlass. Pick one per game in the control panel, or from the toolbar on the phone.
 
 ![Built-in layouts](docs/img/layouts.png)
 
@@ -85,6 +85,8 @@ Twenty-three layouts come with PitGlass. Pick one per game in the control panel,
 | Cars | **Race GT** · **Road car** · **Formula** (wheel display with shift LEDs) · **Turbo-era formula** (one big tachometer and four small dials) · **Pro datalogger** (aftermarket ECU dash, with a launch page) · **Classic '60s** (cream dials, chrome rings) · **Digital '84** (segment displays) · **Rally** · **Street tuner** · **Night stint** (red on black) |
 | Trucks and buses | **Truck & bus** · **Classic truck** (analog) · **Digital cluster** · **Coach** |
 | Aircraft | **Glass cockpit** · **Steam gauges** (the six-pack) · **Airliner** (flight display beside the map) · **Warbird** |
+| After real cars | **Italia V8** (Ferrari 458 Italia: yellow tachometer between two displays) · **Twin-turbo '87** (Ferrari F40) · **Five dials** (Porsche 911 GT3) · **Touring car '87** (BMW M3 E30) · **Hachi-roku** (Toyota AE86) · **Multi-function** (Nissan GT-R R35, with its data screen) · **V10 screen** (Lamborghini Huracán) · **GT3 display** (race car data displays) |
+| After real trucks and coaches | **Swedish twin-dial** (Scania R/S) · **German twin-dial** (Mercedes-Benz Actros) · **Big speedometer** (Volvo FH) · **Screen cockpit** (the all-screen generation) · **Grand tourer coach** (MAN Lion's Coach) · **Rodoviário** (Brazilian coaches on Mercedes-Benz O 500 chassis) |
 | Maps, for a second screen | **Track map** (the circuit and where you are on it) · **Truck GPS** (the truck on the real map, turning with the road, with route distance and time) · **Moving map** (the aircraft on the real map) |
 | Any game | **Wheel inputs** · **Standby** |
 
@@ -92,9 +94,25 @@ Twenty-three layouts come with PitGlass. Pick one per game in the control panel,
 | --- | --- |
 | ![Truck GPS](docs/img/gps.png) | ![Moving map on a second screen](docs/img/movingmap.png) |
 
+The layouts after real vehicles follow the arrangement, scales and colors of each instrument cluster, drawn with PitGlass widgets. They are impressions, not copies, and PitGlass is not affiliated with any of those makers.
+
+| After real cars | After real trucks and coaches |
+| --- | --- |
+| ![Layouts after real cars](docs/img/real-cars.png) | ![Layouts after real trucks and coaches](docs/img/real-trucks.png) |
+
 Every screen keeps its own choice: scan the QR code on a tablet too, tap the screen and pick a map there while the phone stays on the dashboard. More in [docs/LAYOUTS.md](docs/LAYOUTS.md#maps-and-a-second-screen).
 
-Open the control panel, pick a layout and press **Duplicate**: the built-in ones are read-only, your copy is yours to change.
+### Make your own
+
+Press **New layout** in the control panel, give it a name, and start from an empty grid (with one of the ready-made looks) or from a copy of any layout. In the editor:
+
+- click a widget in the list to add it; it lands in the first free spot. Drag to move, pull the corner to resize;
+- pick what it shows, its scale, labels and icon on the right;
+- give any widget **its own colors** (panel, text, labels, accent) over the layout's, or remove its panel to lay it over another one, like the gear inside a tachometer;
+- change the layout's colors, typeface and panel style on the left, and add pages;
+- **Ctrl+Z / Ctrl+Y** undo and redo, **Ctrl+S** saves, arrows nudge, Delete removes.
+
+The built-in layouts are read-only: **Duplicate** one and the copy is yours to change.
 
 ![Layout editor](docs/img/editor.jpg)
 
@@ -145,4 +163,4 @@ The server is TypeScript run directly by Node (no build step). The page in `web/
 
 [MIT](LICENSE). Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
 
-PitGlass is not affiliated with any game publisher. Game names are trademarks of their owners.
+PitGlass is not affiliated with any game publisher or vehicle maker. Game, brand and model names are trademarks of their owners and are used only to say what a layout was modelled on.

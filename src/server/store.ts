@@ -38,6 +38,7 @@ export function cleanLayout(raw: unknown): Layout {
     id: l.id,
     name: String(l.name ?? l.id).slice(0, 60),
     author: l.author ? String(l.author).slice(0, 60) : undefined,
+    note: l.note ? String(l.note).slice(0, 120) : undefined,
     kind: ['car', 'truck', 'plane', 'any'].includes(l.kind) ? l.kind : 'any',
     cols,
     rows,

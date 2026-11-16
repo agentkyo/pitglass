@@ -1,6 +1,6 @@
 // Visual layout editor: drag widgets on the grid, pull the corner to resize, edit properties.
 import { CHANNEL, CHANNELS, GROUP_NAMES, type ChannelGroup, type Frame } from '../../src/shared/channels.ts'
-import { FONTS, STYLES, type Layout, type Widget } from '../../src/shared/types.ts'
+import { FONTS, STYLES, UI_COLORS, type Layout, type Widget } from '../../src/shared/types.ts'
 import { el, net, pick, t } from './core.ts'
 import { duplicate } from './home.ts'
 import { SAMPLE, Stage } from './stage.ts'
@@ -37,7 +37,15 @@ export function mountEditor(root: HTMLElement, id: string): () => void {
   const save = el('button', 'btn primary', readonly ? t('duplicate') : t('save'))
   top.appendChild(back)
   top.appendChild(name)
+  const undoB = el('button', 'btn', '↶')
+  const redoB = el('button', 'btn', '↷')
+  undoB.title = t('undo')
+  redoB.title = t('redo')
   top.appendChild(status)
+  if (!readonly) {
+    top.appendChild(undoB)
+    top.appendChild(redoB)
+  }
   top.appendChild(save)
   const left = el('aside', 'side')
   const mid = el('main')
@@ -53,12 +61,52 @@ export function mountEditor(root: HTMLElement, id: string): () => void {
   view.appendChild(mid)
   view.appendChild(right)
 
+  // every change is a step back for Ctrl+Z; quick bursts (typing, a color being dragged) count as one
+  const history: string[] = [JSON.stringify(layout)]
+  let at = 0
+  let lastSnap = 0
+  const marks = () => {
+    undoB.disabled = at === 0
+    redoB.disabled = at >= history.length - 1
+  }
   const touch = () => {
     if (readonly) return
     dirty = true
     status.textContent = t('unsaved')
     status.className = 'status warn'
+    const snap = JSON.stringify(layout)
+    if (snap === history[at]) return
+    const now = Date.now()
+    if (now - lastSnap < 600 && at > 0 && at === history.length - 1) history[at] = snap
+    else {
+      history.length = at + 1
+      history.push(snap)
+      if (history.length > 100) history.shift()
+      at = history.length - 1
+    }
+    lastSnap = now
+    marks()
   }
+  const travel = (step: number) => {
+    const to = at + step
+    if (readonly || to < 0 || to >= history.length) return
+    at = to
+    lastSnap = 0
+    const snap = JSON.parse(history[at]) as Layout
+    for (const k of Object.keys(layout)) delete (layout as any)[k]
+    Object.assign(layout, snap)
+    page = Math.min(page, layout.pages.length - 1)
+    sel = null
+    name.value = layout.name
+    dirty = true
+    status.textContent = t('unsaved')
+    status.className = 'status warn'
+    marks()
+    redraw()
+  }
+  undoB.onclick = () => travel(-1)
+  redoB.onclick = () => travel(1)
+  marks()
   status.textContent = readonly ? t('readonly') : ''
 
   const data = (): Frame => (preview === 'live' && net.game ? net.frame : SAMPLE[preview === 'sample' ? layout.kind : preview] || SAMPLE.car)
@@ -164,6 +212,25 @@ export function mountEditor(root: HTMLElement, id: string): () => void {
     return s
   }
 
+  /** Put a new widget in the first empty spot that fits it, trying smaller sizes before giving up. */
+  const place = (w: Widget) => {
+    const others = layout.pages[page].widgets
+    const free = (x: number, y: number, ww: number, hh: number) => !others.some((o) => o !== w && x < o.x + o.w && o.x < x + ww && y < o.y + o.h && o.y < y + hh)
+    for (const shrink of [1, 0.75, 0.5]) {
+      const ww = Math.max(1, Math.round(w.w * shrink))
+      const hh = Math.max(1, Math.round(w.h * shrink))
+      for (let y = 0; y + hh <= layout.rows; y++)
+        for (let x = 0; x + ww <= layout.cols; x++)
+          if (free(x, y, ww, hh)) {
+            w.x = x
+            w.y = y
+            w.w = ww
+            w.h = hh
+            return
+          }
+    }
+  }
+
   const drawLeft = () => {
     left.innerHTML = ''
     const pg = group(left, t('pages'))
@@ -217,6 +284,7 @@ export function mountEditor(root: HTMLElement, id: string): () => void {
             id: `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, type: def.type, x: 0, y: 0,
             w: Math.min(def.w, layout.cols), h: Math.min(def.h, layout.rows), ch: def.defCh, p: {}
           }
+          place(w)
           layout.pages[page].widgets.push(w)
           sel = w
           touch()
@@ -365,7 +433,53 @@ export function mountEditor(root: HTMLElement, id: string): () => void {
       pos.appendChild(i)
     }
     field(g, 'x · y · w · h', pos)
+
+    // ---- its own colors, over the layout's
+    const ap = group(right, t('appearance'))
+    const row = el('div', 'swatches own')
+    for (const key of Object.keys(UI_COLORS) as (keyof typeof UI_COLORS)[]) {
+      const cur = p[key]
+      const has = typeof cur === 'string' && cur !== ''
+      const cell = el('div', `own${has ? ' set' : ''}`)
+      const c = input('color', has ? (cur as string).slice(0, 7) : layout.theme[UI_COLORS[key]].slice(0, 7), (v) => {
+        set(key, v)
+        cell.classList.add('set')
+      })
+      c.title = t(`c_${UI_COLORS[key]}`)
+      const clear = el('button', 'x', '×')
+      clear.disabled = readonly
+      clear.onclick = () => {
+        set(key, undefined)
+        drawProps()
+      }
+      cell.appendChild(c)
+      cell.appendChild(clear)
+      cell.appendChild(el('small', '', t(`c_${UI_COLORS[key]}`)))
+      row.appendChild(cell)
+    }
+    ap.appendChild(row)
+    ap.appendChild(el('p', 'hint', t('appearanceHelp')))
+    const bare = input('checkbox', '', () => {})
+    bare.checked = p.uiBare === true
+    bare.onchange = () => set('uiBare', bare.checked || undefined)
+    field(ap, t('noPanel'), bare)
     if (readonly) return
+    const reorder = (front: boolean) => {
+      const list = layout.pages[page].widgets
+      list.splice(list.indexOf(w), 1)
+      if (front) list.push(w)
+      else list.unshift(w)
+      touch()
+      drawStage()
+    }
+    const ord = el('div', 'btns')
+    const fr = el('button', 'btn', t('toFront'))
+    fr.onclick = () => reorder(true)
+    const bk = el('button', 'btn', t('toBack'))
+    bk.onclick = () => reorder(false)
+    ord.appendChild(fr)
+    ord.appendChild(bk)
+    ap.appendChild(ord)
     const dup = el('button', 'btn', t('dupWidget'))
     dup.onclick = () => {
       const c: Widget = JSON.parse(JSON.stringify(w))
@@ -436,6 +550,11 @@ export function mountEditor(root: HTMLElement, id: string): () => void {
     if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       save.click()
+      return
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.key === 'y')) {
+      e.preventDefault()
+      travel(e.key === 'y' || e.shiftKey ? 1 : -1)
       return
     }
     if (!sel || readonly) return

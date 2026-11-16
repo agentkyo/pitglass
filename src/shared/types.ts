@@ -12,7 +12,11 @@ export interface Widget {
   h: number
   /** channel id, for widgets bound to one value */
   ch?: string
-  /** everything else: label, color, icon, min, max... */
+  /**
+   * everything else: label, color, icon, min, max...
+   * Any widget also takes its own colors, over the layout theme: uiPanel, uiText, uiDim, uiAccent
+   * (#rrggbb), and uiBare (true: no panel behind it).
+   */
   p?: Record<string, string | number | boolean>
 }
 
@@ -45,6 +49,8 @@ export interface Layout {
   id: string
   name: string
   author?: string
+  /** one line under the name in the gallery, e.g. what inspired it */
+  note?: string
   /** 'car' | 'truck' | 'plane' | 'any': which family of games it was drawn for */
   kind: 'car' | 'truck' | 'plane' | 'any'
   cols: number
@@ -107,3 +113,5 @@ export const PORT = 47830
 export const DRIVE_PORT = 47831
 /** UDP: the shared copy of a game's telemetry port, see UdpSource and docs/INTEGRATIONS.md */
 export const SHARE_PORTS = { beamng: 47834, motortown: 47835 } as const
+/** per-widget color overrides (widget props) and the theme color each one replaces */
+export const UI_COLORS = { uiPanel: 'panel', uiText: 'text', uiDim: 'dim', uiAccent: 'accent' } as const
