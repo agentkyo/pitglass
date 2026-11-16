@@ -8,7 +8,9 @@ import { BUILTIN, DEFAULT_LAYOUT } from '../shared/layouts.ts'
 import { WIDGET, niceStep } from '../../web/src/widgets.ts'
 import { Hub, diff } from './hub.ts'
 import { decodeAc } from './sources/ac.ts'
-import { decodeScs, fmtGear } from './sources/ets2.ts'
+import zlib from 'node:zlib'
+import { clip, encodePng } from './screen.ts'
+import { decodeScs, describeEvent, fmtGear } from './sources/ets2.ts'
 import type { Source } from './sources/source.ts'
 import dgram from 'node:dgram'
 import { scsToLatLon } from './sources/scsmap.ts'
@@ -288,12 +290,14 @@ test('store keeps user layouts and settings, and protects the built-in ones', ()
     mine.id = 'my-race'
     mine.name = 'My race'
     a.put(mine)
-    a.setConfig({ units: 'imperial', assign: { ac: 'my-race', 'bad game': 'x' }, demo: 'nope' as never })
+    a.setConfig({ units: 'imperial', assign: { ac: 'my-race', 'bad game': 'x' }, demo: 'nope' as never, mirror: { x: -100.4, y: 20, w: 400, h: 300 } })
+    a.setConfig({ mirror: { x: 0, y: 0, w: 2, h: 2 } })
     const b = new Store(dir)
     assert.equal(b.key, a.key)
     assert.equal(b.config.units, 'imperial')
     assert.deepEqual(b.config.assign, { ac: 'my-race' })
     assert.equal(b.config.demo, 'off')
+    assert.deepEqual(b.config.mirror, { x: -100, y: 20, w: 400, h: 300 }, 'a too small area is refused, the good one stays')
     assert.equal(b.layouts().find((l) => l.id === 'my-race')?.name, 'My race')
     assert.equal(b.remove('my-race'), true)
     assert.equal(b.remove('race-gt'), false)
@@ -383,4 +387,39 @@ test('track drawing of Assetto Corsa: map.png + data/map.ini', () => {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
   }
+})
+
+test('screen mirror: the area stays on the desktop and the picture is a valid PNG', () => {
+  const desk = { x: -1920, y: 0, w: 6400, h: 1080 }
+  assert.deepEqual(clip({ x: -2000, y: 900, w: 400, h: 400 }, desk), { x: -1920, y: 900, w: 320, h: 180 })
+  assert.equal(clip({ x: 9000, y: 0, w: 100, h: 100 }, desk), null)
+  // 2 x 1 pixels, BGRA: blue then red
+  const png = encodePng(Buffer.from([255, 0, 0, 255, 0, 0, 255, 255]), 2, 1)
+  assert.equal(png.toString('latin1', 1, 4), 'PNG')
+  assert.equal(png.readUInt32BE(16), 2)
+  assert.equal(png.readUInt32BE(20), 1)
+  const idat = png.indexOf('IDAT')
+  const raw = zlib.inflateSync(png.subarray(idat + 4, idat + 4 + png.readUInt32BE(idat - 4)))
+  assert.deepEqual([...raw], [0, 0, 0, 255, 255, 0, 0], 'filter byte, then RGB of each pixel')
+})
+
+test('ETS2 events become one line of text; warnings and terminals are read', () => {
+  const b = Buffer.alloc(21600)
+  b[0] = 1
+  b.write('speeding_camera', 3436)
+  b.writeBigInt64LE(550n, 4216)
+  assert.equal(describeEvent(b, 'fined'), 'Fine: speeding camera · 550')
+  b.writeBigInt64LE(12840n, 4208)
+  b.writeFloatLE(412, 1460)
+  b.writeInt32LE(310, 640)
+  assert.equal(describeEvent(b, 'jobDelivered'), 'Delivered · +12,840 · 412 km · 310 XP')
+  b[4300] = 1
+  b.write('Busbahnhof', 2876)
+  b[1572] = 1
+  b[1576] = 1
+  const f = decodeScs(b)!
+  assert.equal(f.destCompany, 'Busbahnhof')
+  assert.equal(f.oilWarn, true)
+  assert.equal(f.waterWarn, false)
+  assert.equal(f.engineOn, true)
 })

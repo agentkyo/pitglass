@@ -13,6 +13,7 @@ import { WebSocketServer, type WebSocket } from 'ws'
 import type { ServerMsg, State } from '../shared/types.ts'
 import type { Apps } from './apps.ts'
 import type { Hub } from './hub.ts'
+import { capture, desktop } from './screen.ts'
 import type { MsfsSource } from './sources/msfs.ts'
 import type { Store } from './store.ts'
 import type { Trail } from './trail.ts'
@@ -50,6 +51,7 @@ export class Server {
   private screens = new Set<WebSocket & { local?: boolean; lag?: boolean }>()
   private qr = ''
   private qrFor = ''
+  private shot: { at: number; key: string; data: Buffer; type: string } | null = null
 
   private d: Deps
 
@@ -166,6 +168,11 @@ export class Server {
     res.end(JSON.stringify(body))
   }
 
+  private image(res: http.ServerResponse, data: Buffer, type: string) {
+    res.writeHead(200, { 'Content-Type': type, 'Content-Length': data.length, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' })
+    res.end(data)
+  }
+
   private body(req: http.IncomingMessage): Promise<any> {
     return new Promise((resolve, reject) => {
       let raw = ''
@@ -197,6 +204,26 @@ export class Server {
       if (p === '/api/state') return this.json(res, 200, await this.state(local))
       if (p === '/api/layouts') return this.json(res, 200, store.layouts())
       if (p === '/api/telemetry') return this.json(res, 200, { game: hub.game, data: hub.frame })
+      // the mirrored piece of the screen, for paired screens; a frame is reused for a moment so several screens cost one capture
+      if (p === '/api/mirror') {
+        const m = store.config.mirror
+        if (!m) return this.json(res, 404, { error: 'no screen area chosen: pick one in the control panel on the PC' })
+        const key = `${m.x},${m.y},${m.w},${m.h}`
+        if (!this.shot || this.shot.key !== key || Date.now() - this.shot.at > 70) {
+          const c = capture(m, 900)
+          if (!c) return this.json(res, 503, { error: 'the screen could not be captured' })
+          this.shot = { at: Date.now(), key, data: c.data, type: c.type }
+        }
+        return this.image(res, this.shot.data, this.shot.type)
+      }
+      // the whole desktop, or any piece of it: only for the PC itself, to choose the area
+      if (p === '/api/desktop' && local) return this.json(res, 200, desktop() ?? { x: 0, y: 0, w: 0, h: 0 })
+      if (p === '/api/desktop.jpg' && local) {
+        const d = desktop()
+        const q = (k: string) => Math.round(Number(url.searchParams.get(k)))
+        const c = d && capture(url.searchParams.has('w') ? { x: q('x'), y: q('y'), w: q('w'), h: q('h') } : d, 1920)
+        return c ? this.image(res, c.data, c.type) : this.json(res, 503, { error: 'the screen could not be captured' })
+      }
       if (p === '/api/trail') return this.json(res, 200, this.d.trail.data())
       if (p === '/api/trackmap.png') {
         const img = this.d.trail.image

@@ -91,6 +91,7 @@ The colors do the rest: a cream `panel` with dark `text` and the `serif` font gi
 | `compass` | Heading tape | a number | `span` degrees visible |
 | `map` | Moving map | none | `zoom` zoom (3-16); `light` light map; `rotate` heading up (map turns); `icon` marker (auto, plane, arrow) |
 | `track` | Track map | none | `color` color; `line` track color; `range` follow the vehicle: radius in m (0 = whole track) |
+| `mirror` | Screen mirror (game GPS) | none | `fps` pictures per second (1-15); `fill` fill the box (crops the edges) |
 | `button` | Button | on/off | `label` label; `icon` icon (left, right, high, low, park, hazard, beacon, wiper, cruise, fuel, warn, bolt, plane, camera, layers, arrow, dot); `color` color; `app` sends to (msfs, freedock, ambibox, iampcgamer); `action` action (event, page, notify, flash, fx, capture, overlay, tip); `arg` parameter |
 <!-- widgets:end -->
 
@@ -158,6 +159,9 @@ Values are stored in the units below. With imperial units selected, the page con
 | `fuelWarn` | Low fuel | on/off |  |
 | `oilWarn` | Oil warning | on/off |  |
 | `batteryWarn` | Battery warning | on/off |  |
+| `waterWarn` | Coolant temperature warning | on/off |  |
+| `adblueWarn` | Low AdBlue | on/off |  |
+| `engineOn` | Engine running | on/off |  |
 
 ### Race
 
@@ -194,6 +198,9 @@ Values are stored in the units below. With imperial units selected, the page con
 | `adblue` | AdBlue | number | L |
 | `airPressure` | Brake air pressure | number | bar |
 | `brakeTemp` | Brake temperature | number | °C |
+| `airEmergency` | Air pressure emergency | on/off |  |
+| `diffLock` | Differential lock | on/off |  |
+| `liftAxle` | Lift axle raised | on/off |  |
 | `airWarn` | Air pressure warning | on/off |  |
 | `truckDamage` | Vehicle damage | number, 0 to 1 |  |
 | `cargoDamage` | Cargo damage | number, 0 to 1 |  |
@@ -202,6 +209,10 @@ Values are stored in the units below. With imperial units selected, the page con
 | `cargo` | Cargo | text |  |
 | `origin` | Origin | text |  |
 | `destination` | Destination | text |  |
+| `originCompany` | Origin company / terminal | text |  |
+| `destCompany` | Destination company / terminal | text |  |
+| `notice` | Last event (fine, toll, delivery) | text |  |
+| `plate` | License plate | text |  |
 | `jobDistance` | Job distance | number | km |
 | `navDistance` | Route distance | number | km |
 | `navTime` | Route time | text |  |
@@ -222,6 +233,8 @@ Values are stored in the units below. With imperial units selected, the page con
 | `parkLights` | Parking lights | on/off |  |
 | `beacon` | Beacon | on/off |  |
 | `wipers` | Wipers | on/off |  |
+| `brakeLights` | Brake lights | on/off |  |
+| `reverseLights` | Reversing lights | on/off |  |
 
 ### Flight
 

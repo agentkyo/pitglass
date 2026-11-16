@@ -29,6 +29,41 @@ export const truckLamps = (): Widget[] => [
   w('lamp', 21, 0, 3, 2, 'blinkR', { icon: 'right', color: GREEN })
 ]
 
+/** Warning lights of a coach: the engine and air warnings a bus driver watches, instead of the trailer-era ones. */
+export const coachLamps = (): Widget[] => [
+  w('lamp', 0, 0, 3, 2, 'blinkL', { icon: 'left', color: GREEN }),
+  w('lamp', 3, 0, 2, 2, 'lowBeam', { icon: 'low', color: GREEN }),
+  w('lamp', 5, 0, 2, 2, 'highBeam', { icon: 'high', color: BLUE }),
+  w('lamp', 7, 0, 2, 2, 'handbrake', { icon: 'park', color: RED }),
+  w('lamp', 9, 0, 2, 2, 'cruiseOn', { icon: 'cruise', color: GREEN }),
+  w('lamp', 11, 0, 2, 2, 'engineBrake', { label: 'RET', color: AMBER }),
+  w('lamp', 13, 0, 2, 2, 'airWarn', { label: 'AIR', color: RED }),
+  w('lamp', 15, 0, 2, 2, 'oilWarn', { label: 'OIL', color: RED }),
+  w('lamp', 17, 0, 2, 2, 'waterWarn', { label: 'TEMP', color: RED }),
+  w('lamp', 19, 0, 2, 2, 'fuelWarn', { icon: 'fuel', color: AMBER }),
+  w('lamp', 21, 0, 3, 2, 'blinkR', { icon: 'right', color: GREEN })
+]
+
+/** A coach run: where to, the terminal, time and distance left, and what just happened (toll, fine, arrival). */
+export const tripPage = (): Page => ({
+  name: 'Trip',
+  widgets: [
+    w('text', 0, 0, 8, 3, 'origin', { label: '@origin' }),
+    w('text', 8, 0, 8, 3, 'destination', { label: '@destination' }),
+    w('text', 16, 0, 8, 3, 'destCompany', { label: 'TERMINAL' }),
+    w('value', 0, 3, 6, 3, 'navDistance', { label: 'ROUTE' }),
+    w('value', 6, 3, 6, 3, 'navTime', { label: 'ETA' }),
+    w('value', 12, 3, 6, 3, 'deadline'),
+    w('value', 18, 3, 6, 3, 'restStop'),
+    w('text', 0, 6, 16, 3, 'notice', { label: 'LAST EVENT' }),
+    w('value', 16, 6, 8, 3, 'income'),
+    w('value', 0, 9, 6, 3, 'fuel'),
+    w('value', 6, 9, 6, 3, 'fuelAvg', { label: 'AVG' }),
+    w('value', 12, 9, 6, 3, 'odometer'),
+    w('value', 18, 9, 6, 3, 'gameClock')
+  ]
+})
+
 /** Pages shared by more than one layout. */
 export const autopilotPage = (): Page => ({
   name: 'Autopilot',

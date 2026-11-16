@@ -1,6 +1,6 @@
 {
   "name": "pitglass",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Turn any phone or tablet into a live sim dashboard: Assetto Corsa, Euro Truck Simulator 2, BeamNG, Motor Town and Flight Simulator telemetry, served from your PC over the local network.",
   "license": "MIT",
   "author": "agentkyo <caioviniciusxd@gmail.com>",

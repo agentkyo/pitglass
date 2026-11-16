@@ -16,7 +16,8 @@ export const SAMPLE: Record<string, Frame> = {
     game: 'ets2', vehicle: 'Scania S', speed: 84, rpm: 1180, rpmMax: 2500, rpmPct: 0.47, gear: '12', throttle: 0.4, brake: 0, cruise: 80, cruiseOn: true, speedLimit: 80, overLimit: true,
     fuel: 612, fuelMax: 900, fuelPct: 0.68, fuelRange: 1890, adblue: 61, waterTemp: 86, oilTemp: 97, airPressure: 8.4, oilPressure: 4.1, battery: 27.6, brakeTemp: 96, fuelAvg: 31.5, odometer: 184230, retarder: 2, retarderMax: 4, engineBrake: true,
     blinkL: true, blinkR: false, lowBeam: true, highBeam: false, beacon: false, wipers: false, handbrake: false, airWarn: false, fuelWarn: false, trailer: true,
-    truckDamage: 0.03, cargoDamage: 0, onJob: true, cargo: 'Tractors', origin: 'Berlin', destination: 'Praha', jobDistance: 352, income: 18450,
+    truckDamage: 0.03, cargoDamage: 0, onJob: true, cargo: 'Tractors', origin: 'Berlin', destination: 'Praha', originCompany: 'Tradeaux', destCompany: 'Stokes', notice: 'Toll · 24', plate: 'PG 2026', engineOn: true,
+    navDistance: 345, navTime: '4h54', heading: 152, lat: 52.3, lon: 13.45, jobDistance: 352, income: 18450,
     deadline: '6h50', restStop: '6h05', gameClock: 'Tue 08:14'
   },
   plane: {

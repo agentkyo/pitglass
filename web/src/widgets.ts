@@ -935,6 +935,58 @@ const track: WidgetDef = {
   }
 }
 
+// ---------------------------------------------------------------- screen mirror
+const mirror: WidgetDef = {
+  type: 'mirror', name: ['Screen mirror (game GPS)', 'Espelho da tela (GPS do jogo)'], w: 12, h: 10,
+  props: [
+    { key: 'fps', type: 'number', label: ['Pictures per second (1-15)', 'Imagens por segundo (1-15)'] },
+    { key: 'fill', type: 'bool', label: ['Fill the box (crops the edges)', 'Preencher a caixa (corta as bordas)'] }
+  ],
+  make(w, ctx) {
+    const root = el('div', 'panel w-mirror')
+    const img = el('img')
+    const hint = el('div', 'hint', t(ctx.edit ? 'mirrorEdit' : 'mirrorOff'))
+    img.draggable = false
+    if (flag(w, 'fill')) img.className = 'fill'
+    root.appendChild(img)
+    root.appendChild(hint)
+    const gap = 1000 / clamp(num(w, 'fps', 8), 1, 15)
+    let dead = false
+    let timer = 0
+    let n = 0
+    // one picture at a time: the next is asked for only after this one arrived, so a slow network slows the pace instead of piling up
+    const next = () => {
+      if (dead) return
+      if (document.hidden) {
+        timer = window.setTimeout(next, 1000)
+        return
+      }
+      img.src = `/api/mirror?n=${++n}${net.key ? `&k=${encodeURIComponent(net.key)}` : ''}`
+    }
+    img.onload = () => {
+      hint.style.display = 'none'
+      img.style.visibility = ''
+      timer = window.setTimeout(next, gap)
+    }
+    img.onerror = () => {
+      hint.style.display = ''
+      img.style.visibility = 'hidden'
+      timer = window.setTimeout(next, 2500)
+    }
+    if (!ctx.edit) next()
+    return {
+      el: root,
+      update() {},
+      destroy() {
+        dead = true
+        clearTimeout(timer)
+        img.onload = img.onerror = null
+        img.removeAttribute('src')
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------- button
 const button: WidgetDef = {
   type: 'button', name: ['Button', 'Botão'], w: 4, h: 3, ch: 'bool',
@@ -1344,7 +1396,7 @@ const tach: WidgetDef = {
   }
 }
 
-export const WIDGETS: WidgetDef[] = [value, digits, gear, rpm, tach, bar, gauge, dial, lamp, text, clock, tyres, limit, attitude, altimeter, rose, compass, map, track, button]
+export const WIDGETS: WidgetDef[] = [value, digits, gear, rpm, tach, bar, gauge, dial, lamp, text, clock, tyres, limit, attitude, altimeter, rose, compass, map, track, mirror, button]
 export const WIDGET: Record<string, WidgetDef> = {}
 for (const d of WIDGETS) WIDGET[d.type] = d
 

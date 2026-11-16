@@ -18,7 +18,7 @@ Sem app para instalar no celular, sem conta, sem nuvem. É uma página web hospe
 
 - **Um painel, vários jogos.** O layout troca sozinho quando você abre outro jogo.
 - **Totalmente customizável.** Editor visual no navegador: arraste widgets numa grade, redimensione, escolha o que cada um mostra, mude as cores, crie páginas. Layouts são arquivos JSON que você pode compartilhar.
-- **20 widgets**: números, displays de segmentos, marcha, luzes de troca, conta-giros em barra, barras, mostradores e relógios analógicos, luzes indicadoras, texto, relógio, temperatura dos pneus, placa de limite de velocidade, horizonte artificial, altímetro, giro direcional e fita de proa, mapa móvel, mapa da pista e botões de toque.
+- **21 widgets**: números, displays de segmentos, marcha, luzes de troca, conta-giros em barra, barras, mostradores e relógios analógicos, luzes indicadoras, texto, relógio, temperatura dos pneus, placa de limite de velocidade, horizonte artificial, altímetro, giro direcional e fita de proa, mapa móvel, mapa da pista, espelho da tela e botões de toque.
 - **Mapas numa segunda tela.** Coloque um tablet ao lado do celular: a pista com a sua posição no Assetto Corsa, um GPS para o caminhão no ETS2/ATS, um mapa móvel para o avião no Flight Simulator.
 - **Botões de toque** que agem no simulador (piloto automático, luzes, trem e flaps no Flight Simulator) e nos apps parceiros.
 - **Português do Brasil e inglês**, unidades métricas ou imperiais.
@@ -36,7 +36,7 @@ Sem app para instalar no celular, sem conta, sem nuvem. É uma página web hospe
 | Motor Town: Behind the Wheel | saída de telemetria do jogo, UDP 33330 | Opções › Jogabilidade › Telemetry Data Output, 127.0.0.1:33330 |
 | Microsoft Flight Simulator 2020 / 2024 | SimConnect | ter um `SimConnect.dll` no PC (SDK do MSFS, ou o plugin dos painéis Logitech, que traz um) |
 
-> **Situação: 0.3, início.** Usado de verdade com Assetto Corsa e Euro Truck Simulator 2. Os outros leitores de jogo são portes de decodificadores que já rodam em hardware real no [FreeDock](https://github.com/agentkyo/freedock) e têm testes automatizados, mas ainda não foram usados dentro do PitGlass; o mesmo vale para os mapas. Se algum valor parecer errado no seu jogo, abra uma issue.
+> **Situação: 0.4, início.** Usado de verdade com Assetto Corsa e Euro Truck Simulator 2. Os outros leitores de jogo são portes de decodificadores que já rodam em hardware real no [FreeDock](https://github.com/agentkyo/freedock) e têm testes automatizados, mas ainda não foram usados dentro do PitGlass; o mesmo vale para os mapas. Se algum valor parecer errado no seu jogo, abra uma issue.
 
 ## Começando (Windows)
 
@@ -76,7 +76,7 @@ npm run demo         # compila e roda com um carro de corrida falso
 
 ## Layouts
 
-O PitGlass vem com trinta e sete layouts. Escolha um por jogo no painel de controle, ou pela barra no celular.
+O PitGlass vem com trinta e oito layouts. Escolha um por jogo no painel de controle, ou pela barra no celular.
 
 ![Layouts de fábrica](docs/img/layouts.png)
 
@@ -87,7 +87,7 @@ O PitGlass vem com trinta e sete layouts. Escolha um por jogo no painel de contr
 | Aviões | **Glass cockpit** · **Steam gauges** (o "six-pack") · **Airliner** (tela de voo ao lado do mapa) · **Warbird** |
 | Inspirados em carros reais | **Italia V8** (Ferrari 458 Italia: conta-giros amarelo entre duas telas) · **Twin-turbo '87** (Ferrari F40) · **Five dials** (Porsche 911 GT3) · **Touring car '87** (BMW M3 E30) · **Hachi-roku** (Toyota AE86) · **Multi-function** (Nissan GT-R R35, com a tela de dados dele) · **V10 screen** (Lamborghini Huracán) · **GT3 display** (displays de dados de carros de corrida) |
 | Inspirados em caminhões e ônibus reais | **Swedish twin-dial** (Scania R/S) · **German twin-dial** (Mercedes-Benz Actros) · **Big speedometer** (Volvo FH) · **Screen cockpit** (a geração só de telas) · **Grand tourer coach** (MAN Lion's Coach) · **Rodoviário** (ônibus rodoviários brasileiros sobre chassi Mercedes-Benz O 500) |
-| Mapas, para uma segunda tela | **Track map** (a pista e onde você está nela) · **Truck GPS** (o caminhão no mapa real, girando com a estrada, com distância e tempo da rota) · **Moving map** (o avião no mapa real) |
+| Mapas, para uma segunda tela | **Game GPS** (o GPS do próprio jogo, copiado da tela do PC) · **Track map** (a pista e onde você está nela) · **Truck GPS** (o caminhão no mapa real, girando com a estrada, com distância e tempo da rota) · **Moving map** (o avião no mapa real) |
 | Qualquer jogo | **Wheel inputs** · **Standby** |
 
 | GPS do caminhão (ETS2 / ATS) | Mapa móvel (Flight Simulator) |
@@ -99,6 +99,13 @@ Os layouts inspirados em veículos reais seguem a disposição, as escalas e as 
 | Inspirados em carros reais | Inspirados em caminhões e ônibus reais |
 | --- | --- |
 | ![Layouts inspirados em carros reais](docs/img/real-cars.png) | ![Layouts inspirados em caminhões e ônibus reais](docs/img/real-trucks.png) |
+
+### O GPS do próprio jogo em outra tela
+
+O mapa do Euro Truck Simulator é o mundo do jogo, não o real, então o mapa real só mostra mais ou menos onde você está. Para ter o GPS de verdade, o PitGlass **espelha um pedaço da tela do PC**: no painel de controle, abra **Espelho da tela › Escolher área**, arraste um retângulo sobre o GPS do jogo (o Route Advisor, ou o mapa no painel do caminhão) e escolha o layout **Game GPS** no tablet. Serve para qualquer jogo e qualquer pedaço da tela (um minimapa, um retrovisor, uma torre de tempos).
+
+- O jogo precisa desenhar o GPS na tela do PC e rodar em janela ou sem borda: tela cheia exclusiva não pode ser copiada.
+- A imagem só vai para telas pareadas, só da área que você escolheu, e só enquanto alguma tela estiver mostrando.
 
 Cada tela guarda a própria escolha: leia o QR code também no tablet, toque na tela e escolha um mapa ali, enquanto o celular continua no painel. Mais em [docs/LAYOUTS.md](docs/LAYOUTS.md#maps-and-a-second-screen) (em inglês).
 
@@ -138,7 +145,8 @@ Ele também tem uma pequena API local para as suas ferramentas: `GET /api/teleme
 - Nada sai da sua rede. O único pedido externo é o mapa móvel, que carrega as imagens do OpenStreetMap no celular.
 - O servidor escuta na sua rede local. Uma tela fora do PC precisa apresentar a **chave de pareamento** que vai no QR code; sem ela, todo pedido é recusado. Trate o endereço como uma senha.
 - Pedidos vindos de outros sites são recusados (Host e Origin são conferidos), então uma página aberta no seu navegador não consegue controlar o PitGlass.
-- Um celular pareado pode ver os painéis e apertar os botões do painel. Editar layouts e configurações só é possível no próprio PC.
+- Um celular pareado pode ver os painéis, apertar os botões do painel e, se você ligou o espelho da tela, ver o pedaço da tela que você escolheu. Nada mais da tela é enviado.
+- Editar layouts e configurações só é possível no próprio PC.
 - Os botões do painel só disparam ações de uma lista fixa (um conjunto de eventos do Flight Simulator e as ações dos apps parceiros acima). Não existe "rodar comando" nem "apertar tecla".
 
 ## Planos

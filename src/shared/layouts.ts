@@ -518,6 +518,26 @@ export const BUILTIN: Layout[] = [
     ]
   },
   {
+    ...base, id: 'map-game', name: 'Game GPS', kind: 'truck', note: "The game's own GPS, copied from the PC screen: choose the area in the control panel",
+    theme: theme('#fbbf24'),
+    pages: [
+      {
+        name: 'GPS',
+        widgets: [
+          w('mirror', 0, 0, 17, 12),
+          w('limit', 17, 0, 3, 3, 'speedLimit'),
+          w('value', 20, 0, 4, 3, 'speed', { warn: 'overLimit' }),
+          w('value', 17, 3, 7, 2, 'navDistance'),
+          w('value', 17, 5, 7, 2, 'navTime'),
+          w('text', 17, 7, 7, 2, 'destination', { label: '@destination' }),
+          w('value', 17, 9, 4, 3, 'restStop'),
+          w('value', 21, 9, 3, 3, 'gameClock')
+        ]
+      },
+      { name: 'Full', widgets: [w('mirror', 0, 0, 24, 12)] }
+    ]
+  },
+  {
     ...base, id: 'map-flight', name: 'Moving map', kind: 'plane', theme: theme('#34d399', '#04080c', '#0d141b'),
     pages: [
       {

@@ -48,6 +48,8 @@ function truck(t: number): Frame {
     blinkL: sig && Math.floor(t * 2.6) % 2 === 0, blinkR: false, hazard: false,
     parkLights: true, lowBeam: true, highBeam: Math.floor(t) % 30 > 24, beacon: false, wipers: false,
     trailer: true, truckDamage: 0.03, cargoDamage: 0,
+    engineOn: true, oilWarn: false, waterWarn: false, batteryWarn: false, adblueWarn: false, brakeLights: false, plate: 'PG 2026',
+    originCompany: 'Tradeaux', destCompany: 'Stokes', notice: Math.floor(t) % 60 < 15 ? 'Toll · 24' : '',
     onJob: true, cargo: 'Tractors', origin: 'Berlin', destination: 'Praha', jobDistance: 352, income: 18450,
     // out of Berlin on the way to Praha
     lat: round(52.3 - ((t / 3) % 400) * 0.004, 5), lon: round(13.45 + ((t / 3) % 400) * 0.002, 5), heading: round(152 + 6 * Math.sin(t / 7)),

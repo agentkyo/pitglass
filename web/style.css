@@ -295,3 +295,18 @@ button, select, input { font: inherit; color: inherit; }
 .swatches .own.set .x { display: block; }
 .editor .top .btn:disabled { opacity: .35; }
 .modal .fields input, .modal .fields select { height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #2a3442; background: #151c25; color: #f1f5f9; font: inherit; font-size: 14px; }
+
+/* ================= screen mirror ================= */
+.w-mirror { background: #000; }
+.w-mirror img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; }
+.w-mirror img.fill { object-fit: cover; }
+.w-mirror .hint { position: absolute; left: 8%; right: 8%; top: 50%; transform: translateY(-50%); text-align: center; color: var(--dim); font-size: 14px; }
+.modal .box.wide { max-width: 1500px; }
+.modal .shot { position: relative; line-height: 0; border: 1px solid #243042; border-radius: 8px; overflow: hidden; cursor: crosshair; touch-action: none; background: #05070a; min-height: 60px; }
+.modal .shot img { width: 100%; display: block; user-select: none; -webkit-user-drag: none; }
+.modal .shot .sel { position: absolute; border: 2px solid #38bdf8; background: rgba(56, 189, 248, .18); box-shadow: 0 0 0 4000px rgba(2, 4, 8, .45); pointer-events: none; }
+.modal .lower { display: flex; align-items: flex-start; margin-top: 12px; }
+.modal .lower .fields { flex: 0 0 240px; margin: 0; }
+.modal .lower .fields label { flex: 1 1 90px; }
+.modal .lower .fields input { width: 100%; }
+.modal .lower .preview { flex: 1; min-width: 0; max-height: 320px; object-fit: contain; object-position: left top; margin-left: 12px; border-radius: 8px; background: #05070a; }

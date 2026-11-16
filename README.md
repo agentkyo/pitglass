@@ -18,7 +18,7 @@ No app to install on the phone, no account, no cloud. It is a web page hosted by
 
 - **One dashboard, many games.** The layout changes by itself when you open another game.
 - **Fully customizable.** A visual editor in the browser: drag widgets on a grid, resize, pick what each one shows, change colors, add pages. Layouts are plain JSON files you can share.
-- **20 widgets**: numbers, segment displays, gear, shift lights, bar tachometer, bars, gauges and analog dials, indicator lights, text, clock, tyre temperatures, speed limit sign, artificial horizon, altimeter, heading rose and tape, moving map, track map and touch buttons.
+- **21 widgets**: numbers, segment displays, gear, shift lights, bar tachometer, bars, gauges and analog dials, indicator lights, text, clock, tyre temperatures, speed limit sign, artificial horizon, altimeter, heading rose and tape, moving map, track map, screen mirror and touch buttons.
 - **Maps on a second screen.** Put a tablet next to the phone: the track with your position in Assetto Corsa, a GPS for the truck in ETS2/ATS, a moving map for the aircraft in Flight Simulator.
 - **Touch buttons** that act on the sim (autopilot, lights, gear and flaps in Flight Simulator) and on companion apps.
 - **English and Brazilian Portuguese**, metric or imperial units.
@@ -36,7 +36,7 @@ No app to install on the phone, no account, no cloud. It is a web page hosted by
 | Motor Town: Behind the Wheel | the game's telemetry output, UDP 33330 | Options › Gameplay › Telemetry Data Output, 127.0.0.1:33330 |
 | Microsoft Flight Simulator 2020 / 2024 | SimConnect | have a `SimConnect.dll` on the PC (MSFS SDK, or the Logitech flight panel plugin, which ships one) |
 
-> **Status: 0.3, early.** Driven for real with Assetto Corsa and Euro Truck Simulator 2. The other game readers are ports of decoders that already run on real hardware in [FreeDock](https://github.com/agentkyo/freedock) and are covered by unit tests, but have not been driven inside PitGlass yet; the same goes for the maps. If a value looks wrong in your game, please open an issue.
+> **Status: 0.4, early.** Driven for real with Assetto Corsa and Euro Truck Simulator 2. The other game readers are ports of decoders that already run on real hardware in [FreeDock](https://github.com/agentkyo/freedock) and are covered by unit tests, but have not been driven inside PitGlass yet; the same goes for the maps. If a value looks wrong in your game, please open an issue.
 
 ## Quick start (Windows)
 
@@ -76,7 +76,7 @@ npm run demo         # build + run with a fake race car
 
 ## Layouts
 
-Thirty-seven layouts come with PitGlass. Pick one per game in the control panel, or from the toolbar on the phone.
+Thirty-eight layouts come with PitGlass. Pick one per game in the control panel, or from the toolbar on the phone.
 
 ![Built-in layouts](docs/img/layouts.png)
 
@@ -87,7 +87,7 @@ Thirty-seven layouts come with PitGlass. Pick one per game in the control panel,
 | Aircraft | **Glass cockpit** · **Steam gauges** (the six-pack) · **Airliner** (flight display beside the map) · **Warbird** |
 | After real cars | **Italia V8** (Ferrari 458 Italia: yellow tachometer between two displays) · **Twin-turbo '87** (Ferrari F40) · **Five dials** (Porsche 911 GT3) · **Touring car '87** (BMW M3 E30) · **Hachi-roku** (Toyota AE86) · **Multi-function** (Nissan GT-R R35, with its data screen) · **V10 screen** (Lamborghini Huracán) · **GT3 display** (race car data displays) |
 | After real trucks and coaches | **Swedish twin-dial** (Scania R/S) · **German twin-dial** (Mercedes-Benz Actros) · **Big speedometer** (Volvo FH) · **Screen cockpit** (the all-screen generation) · **Grand tourer coach** (MAN Lion's Coach) · **Rodoviário** (Brazilian coaches on Mercedes-Benz O 500 chassis) |
-| Maps, for a second screen | **Track map** (the circuit and where you are on it) · **Truck GPS** (the truck on the real map, turning with the road, with route distance and time) · **Moving map** (the aircraft on the real map) |
+| Maps, for a second screen | **Game GPS** (the game's own GPS, copied from the PC screen) · **Track map** (the circuit and where you are on it) · **Truck GPS** (the truck on the real map, turning with the road, with route distance and time) · **Moving map** (the aircraft on the real map) |
 | Any game | **Wheel inputs** · **Standby** |
 
 | Truck GPS (ETS2 / ATS) | Moving map (Flight Simulator) |
@@ -99,6 +99,13 @@ The layouts after real vehicles follow the arrangement, scales and colors of eac
 | After real cars | After real trucks and coaches |
 | --- | --- |
 | ![Layouts after real cars](docs/img/real-cars.png) | ![Layouts after real trucks and coaches](docs/img/real-trucks.png) |
+
+### The game's own GPS on another screen
+
+The map of Euro Truck Simulator is the game's world, not the real one, so the real map only shows roughly where you are. For the real thing, PitGlass can **mirror a piece of the PC screen**: in the control panel, open **Screen mirror › Choose area**, drag a rectangle over the game's GPS (the Route Advisor, or the map on the truck's dashboard) and pick the **Game GPS** layout on the tablet. It works for any game and any piece of the screen (a minimap, a mirror, a timing tower).
+
+- The game must draw the GPS on the PC screen, and run in a window or borderless: exclusive fullscreen cannot be copied.
+- The picture is sent only to paired screens, only for the area you chose, and only while a screen is showing it.
 
 Every screen keeps its own choice: scan the QR code on a tablet too, tap the screen and pick a map there while the phone stays on the dashboard. More in [docs/LAYOUTS.md](docs/LAYOUTS.md#maps-and-a-second-screen).
 
@@ -138,7 +145,8 @@ It also has a small local API for your own tools: `GET /api/telemetry` returns t
 - Nothing leaves your network. The only outside request is the moving map, which loads tiles from OpenStreetMap on the phone.
 - The server listens on your local network. A screen outside the PC must present the **pairing key** carried by the QR code; without it every request is refused. Treat the address like a password.
 - Requests from other web sites are refused (Host and Origin are checked), so a page open in your browser cannot drive PitGlass.
-- A paired phone can view dashboards and press dashboard buttons. Editing layouts and settings is only possible on the PC itself.
+- A paired phone can view dashboards, press dashboard buttons and, if you turned the screen mirror on, see the piece of the screen you chose. Nothing else of the screen is ever sent.
+- Editing layouts and settings is only possible on the PC itself.
 - Dashboard buttons can only trigger the actions on a fixed list (a set of Flight Simulator events and the companion app actions above). There is no "run a command" or "press a key".
 
 ## Roadmap

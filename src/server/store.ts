@@ -110,6 +110,12 @@ export class Store {
     if (patch.demo && ['off', 'car', 'truck', 'plane'].includes(patch.demo)) c.demo = patch.demo
     if (typeof patch.bestLapFlash === 'boolean') c.bestLapFlash = patch.bestLapFlash
     if (typeof patch.simconnectDll === 'string') c.simconnectDll = patch.simconnectDll.slice(0, 400)
+    if (patch.mirror === null) c.mirror = null
+    else if (patch.mirror && typeof patch.mirror === 'object') {
+      const m = patch.mirror
+      const n = [m.x, m.y, m.w, m.h].map((v) => Math.round(Number(v)))
+      if (n.every((v) => Math.abs(v) <= 100_000) && n[2] >= 16 && n[3] >= 16) c.mirror = { x: n[0], y: n[1], w: n[2], h: n[3] }
+    }
     if (patch.assign && typeof patch.assign === 'object') {
       const a: Record<string, string> = {}
       for (const [g, id] of Object.entries(patch.assign)) if (/^[a-z0-9]{1,16}$/.test(g) && (id === '' || ID.test(String(id)))) a[g] = String(id)

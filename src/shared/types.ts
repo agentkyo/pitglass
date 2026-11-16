@@ -71,6 +71,8 @@ export interface Config {
   /** Ambibox LED strip flashes purple on a new best lap */
   bestLapFlash: boolean
   simconnectDll: string
+  /** rectangle of the PC desktop (pixels) that the `mirror` widget shows; null = off */
+  mirror: { x: number; y: number; w: number; h: number } | null
 }
 
 export interface SourceStatus {
@@ -107,7 +109,7 @@ export type ServerMsg =
   | { t: 'state'; state: State }
   | { t: 'layouts' }
 
-export const DEFAULT_CONFIG: Config = { lang: '', units: 'metric', assign: {}, demo: 'off', bestLapFlash: true, simconnectDll: '' }
+export const DEFAULT_CONFIG: Config = { lang: '', units: 'metric', assign: {}, demo: 'off', bestLapFlash: true, simconnectDll: '', mirror: null }
 export const PORT = 47830
 /** UDP: MyWheel-style drive state (steer, pedals, gear) from any app, see docs/INTEGRATIONS.md */
 export const DRIVE_PORT = 47831

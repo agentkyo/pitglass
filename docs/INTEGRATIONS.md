@@ -88,6 +88,14 @@ Assetto Corsa, ETS2/ATS and Flight Simulator do not have this limit: shared memo
 
 ETS2 and ATS also publish `lat`/`lon`: the truck's world position turned back into real-world coordinates with the games' own map projection. The game world is about 1:19, so the truck is in the right region and next to the right cities, not on the exact real road.
 
+## Screen mirror
+
+`GET /api/mirror` returns the piece of the PC desktop chosen in the control panel (`config.mirror`: `x`, `y`, `w`, `h` in desktop pixels) as a JPEG, at most 900 pixels wide; 404 while no area is chosen. The `mirror` widget asks for one picture at a time, a few times a second. The whole desktop (`/api/desktop`, `/api/desktop.jpg`) can only be read from the PC itself, to choose the area. Windows only; a game in exclusive fullscreen comes out black.
+
+## What ETS2 and ATS publish
+
+PitGlass reads the game through the telemetry SDK (game telemetry version 1.18 at the time of writing). The SDK has no channels of its own for coaches: doors, passengers and stops are not published, with or without the coach DLC. A coach uses the same channels as a truck, and PitGlass reads the ones that matter on a bus: air and oil pressure, battery, retarder, the engine warnings (`oilWarn`, `waterWarn`, `batteryWarn`, `adblueWarn`, `airEmergency`), the route (`navDistance`, `navTime`), the terminals of a job (`originCompany`, `destCompany`) and the gameplay events (fine, toll, ferry, train, refuel, delivery) as one line of text in `notice`, shown for 20 seconds.
+
 ## Actions (dashboard buttons)
 
 ```

@@ -23,10 +23,16 @@ const O = {
   oilPressure: 1016, oilTemperature: 1020, waterTemperature: 1024, batteryVoltage: 1028, odometer: 1056,
   wearEngine: 1036, wearTransmission: 1040, wearCabin: 1044, wearChassis: 1048, wearWheels: 1052, routeDistance: 1060, routeTime: 1064,
   speedLimit: 1068, cargoDamage: 1468,
-  parkBrake: 1566, motorBrake: 1567, airPressureWarning: 1568, fuelWarning: 1570,
+  parkBrake: 1566, motorBrake: 1567, airPressureWarning: 1568, airPressureEmergency: 1569, fuelWarning: 1570,
+  adblueWarning: 1571, oilPressureWarning: 1572, waterTemperatureWarning: 1573, batteryVoltageWarning: 1574, engineEnabled: 1576,
+  lightsBrake: 1586, lightsReverse: 1587, differentialLock: 1608, liftAxle: 1609,
   wipers: 1577, blinkerLeftOn: 1580, blinkerRightOn: 1581, lightsParking: 1582, lightsBeamLow: 1583,
   lightsBeamHigh: 1584, lightsBeacon: 1585, lightsHazard: 1588, cruiseControl: 1589,
-  truckBrand: 2364, truckName: 2492, cargo: 2620, cityDst: 2748, citySrc: 3004,
+  truckBrand: 2364, truckName: 2492, cargo: 2620, cityDst: 2748, compDst: 2876, citySrc: 3004, compSrc: 3132, licensePlate: 3212,
+  // what happened last: each flag flips when its event happens again
+  jobDeliveredDistanceKm: 1460, refuelAmount: 1464, jobDeliveredEarnedXp: 640, fineOffence: 3436, ferryTargetName: 3532, trainTargetName: 3788,
+  jobCancelledPenalty: 4200, jobDeliveredRevenue: 4208, fineAmount: 4216, tollgatePayAmount: 4224, ferryPayAmount: 4232, trainPayAmount: 4240,
+  jobCancelled: 4302, jobDelivered: 4303, fined: 4304, tollgate: 4305, ferry: 4306, train: 4307, refuelPayed: 4309,
   // truck placement, doubles: world x/y/z in metres, then heading/pitch/roll as fractions of a turn
   coordinateX: 2200, coordinateZ: 2216, rotationX: 2224,
   jobIncome: 4000, onJob: 4300, trailerAttached: 6080
@@ -90,6 +96,17 @@ export function decodeScs(b: Buffer): Frame | null {
     waterTemp: round(f(O.waterTemperature)),
     oilTemp: round(f(O.oilTemperature)),
     airWarn: flag(O.airPressureWarning),
+    airEmergency: flag(O.airPressureEmergency),
+    adblueWarn: flag(O.adblueWarning),
+    oilWarn: flag(O.oilPressureWarning),
+    waterWarn: flag(O.waterTemperatureWarning),
+    batteryWarn: flag(O.batteryVoltageWarning),
+    engineOn: flag(O.engineEnabled),
+    brakeLights: flag(O.lightsBrake),
+    reverseLights: flag(O.lightsReverse),
+    diffLock: flag(O.differentialLock),
+    liftAxle: flag(O.liftAxle),
+    plate: cstr(b, O.licensePlate, 64),
     handbrake: flag(O.parkBrake),
     engineBrake: flag(O.motorBrake),
     retarder: b.readUInt32LE(O.retarderBrake),
@@ -109,6 +126,8 @@ export function decodeScs(b: Buffer): Frame | null {
     cargo: onJob ? cstr(b, O.cargo, 64) : '',
     origin: onJob ? cstr(b, O.citySrc, 64) : '',
     destination: onJob ? cstr(b, O.cityDst, 64) : '',
+    originCompany: onJob ? cstr(b, O.compSrc, 64) : '',
+    destCompany: onJob ? cstr(b, O.compDst, 64) : '',
     jobDistance: onJob ? b.readUInt32LE(O.plannedDistanceKm) : null,
     income: onJob ? Number(b.readBigUInt64LE(O.jobIncome)) : null,
     deadline: onJob && delivery && tabs && delivery < 0xfffffff0 ? fmtDuration(delivery - tabs) : '',
@@ -118,6 +137,21 @@ export function decodeScs(b: Buffer): Frame | null {
   return frame
 }
 
+const EVENTS = ['jobCancelled', 'jobDelivered', 'fined', 'tollgate', 'ferry', 'train', 'refuelPayed'] as const
+const NOTICE_MS = 20_000
+
+/** One line about a gameplay event, from the values the game leaves behind when it happens. */
+export function describeEvent(b: Buffer, ev: (typeof EVENTS)[number]): string {
+  const money = (off: number) => Number(b.readBigInt64LE(off)).toLocaleString('en-US')
+  if (ev === 'fined') return `Fine: ${cstr(b, O.fineOffence, 32).replace(/_/g, ' ') || 'offence'} · ${money(O.fineAmount)}`
+  if (ev === 'tollgate') return `Toll · ${money(O.tollgatePayAmount)}`
+  if (ev === 'ferry') return `Ferry to ${cstr(b, O.ferryTargetName, 64)} · ${money(O.ferryPayAmount)}`
+  if (ev === 'train') return `Train to ${cstr(b, O.trainTargetName, 64)} · ${money(O.trainPayAmount)}`
+  if (ev === 'refuelPayed') return `Refuelled ${round(b.readFloatLE(O.refuelAmount))} L`
+  if (ev === 'jobCancelled') return `Job cancelled · -${money(O.jobCancelledPenalty)}`
+  return `Delivered · +${money(O.jobDeliveredRevenue)} · ${round(b.readFloatLE(O.jobDeliveredDistanceKm))} km · ${b.readInt32LE(O.jobDeliveredEarnedXp)} XP`
+}
+
 export class ScsSource implements Source {
   id = 'ets2'
   private map: SharedMemory | null = null
@@ -125,6 +159,9 @@ export class ScsSource implements Source {
   private render = -1n
   private renderAt = 0
   private live = false
+  private flags: number[] | null = null
+  private notice = ''
+  private noticeAt = 0
 
   poll(now: number): Frame | null {
     if (!this.map) {
@@ -133,6 +170,7 @@ export class ScsSource implements Source {
       this.map = SharedMemory.open('Local\\SCSTelemetry', MAP_SIZE)
       if (!this.map) return null
       this.renderAt = now
+      this.flags = null
     }
     const b = this.map.buf
     // renderTime advances on every rendered frame, paused or not. If it stops, the game is gone
@@ -149,6 +187,19 @@ export class ScsSource implements Source {
     }
     const frame = decodeScs(b)
     this.live = !!frame
+    if (frame) {
+      // an event flag that changed since the last look is news; the first look only takes note
+      const flags = EVENTS.map((e) => b[O[e]])
+      if (this.flags)
+        EVENTS.forEach((e, i) => {
+          if (flags[i] !== this.flags![i]) {
+            this.notice = describeEvent(b, e)
+            this.noticeAt = now
+          }
+        })
+      this.flags = flags
+      frame.notice = now - this.noticeAt < NOTICE_MS ? this.notice : ''
+    }
     return frame
   }
 

@@ -1,7 +1,7 @@
 // Layouts modelled on real vehicles: the arrangement, scales and colors of the instrument cluster,
 // drawn with PitGlass widgets. They are impressions, not copies: no logos, and the centre displays
 // show what the games publish. `note` says which vehicle each one follows.
-import { AMBER, GREEN, PURPLE, RED, base, gpsWidgets, jobPage, look, truckLamps, w } from './layoutkit.ts'
+import { AMBER, GREEN, PURPLE, RED, base, coachLamps, gpsWidgets, jobPage, look, tripPage, truckLamps, w } from './layoutkit.ts'
 import type { Layout, Page, Widget } from './types.ts'
 
 const gps = (): Page => ({ name: 'GPS', widgets: gpsWidgets() })
@@ -314,7 +314,7 @@ export const REAL: Layout[] = [
       {
         name: 'Drive',
         widgets: [
-          ...truckLamps(),
+          ...coachLamps(),
           truckTach(0, 2, 7, { greenTo: 0.64, redFrom: 0.86 }),
           w('dial', 7, 2, 5, 3, 'fuelPct', { label: '@fuel', marks: 'E,½,F' }),
           w('dial', 12, 2, 5, 3, 'waterTemp', { label: 'TEMP', marks: 'C,,H' }),
@@ -330,6 +330,7 @@ export const REAL: Layout[] = [
           w('value', 20, 9, 4, 3, 'gameClock')
         ]
       },
+      tripPage(),
       gps()
     ]
   },
@@ -340,7 +341,7 @@ export const REAL: Layout[] = [
       {
         name: 'Drive',
         widgets: [
-          ...truckLamps(),
+          ...coachLamps(),
           w('dial', 0, 2, 7, 7, 'speed', { max: 140, step: 20 }),
           w('dial', 7, 2, 5, 3, 'airPressure', { label: 'AR', max: 12, step: 4 }),
           w('dial', 12, 2, 5, 3, 'oilPressure', { label: 'ÓLEO', max: 8, step: 4 }),
@@ -356,6 +357,7 @@ export const REAL: Layout[] = [
           w('value', 20, 9, 4, 3, 'gameClock')
         ]
       },
+      tripPage(),
       gps()
     ]
   }

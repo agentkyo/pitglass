@@ -22,6 +22,120 @@ export async function duplicate(l: Layout): Promise<Layout> {
   return saved
 }
 
+/** Choose the piece of the desktop that the mirror widget shows: drag on a picture of the screen, fine-tune by numbers. */
+function mirrorDialog(host: HTMLElement, current: Config['mirror']) {
+  const modal = el('div', 'modal')
+  const box = el('div', 'box wide')
+  modal.appendChild(box)
+  box.appendChild(el('h2', '', t('mirror')))
+  box.appendChild(el('p', 'hint', t('mirrorDrag')))
+  const stageBox = el('div', 'shot')
+  const pic = el('img')
+  pic.draggable = false
+  const sel = el('div', 'sel')
+  stageBox.appendChild(pic)
+  stageBox.appendChild(sel)
+  box.appendChild(stageBox)
+  const lower = el('div', 'lower')
+  const nums = el('div', 'fields')
+  const preview = el('img', 'preview')
+  lower.appendChild(nums)
+  lower.appendChild(preview)
+  box.appendChild(lower)
+
+  let desk = { x: 0, y: 0, w: 0, h: 0 }
+  let r = current ? { ...current } : { x: 0, y: 0, w: 0, h: 0 }
+  const inputs: Record<string, HTMLInputElement> = {}
+  let previewTimer = 0
+  const show = () => {
+    for (const k of ['x', 'y', 'w', 'h'] as const) inputs[k].value = String(r[k])
+    const ok = desk.w > 0 && r.w >= 16 && r.h >= 16
+    sel.style.display = ok ? '' : 'none'
+    save.disabled = !ok
+    if (!ok) return
+    sel.style.left = `${((r.x - desk.x) / desk.w) * 100}%`
+    sel.style.top = `${((r.y - desk.y) / desk.h) * 100}%`
+    sel.style.width = `${(r.w / desk.w) * 100}%`
+    sel.style.height = `${(r.h / desk.h) * 100}%`
+    clearTimeout(previewTimer)
+    previewTimer = window.setTimeout(() => (preview.src = `/api/desktop.jpg?x=${r.x}&y=${r.y}&w=${r.w}&h=${r.h}&n=${Date.now()}`), 250)
+  }
+  for (const k of ['x', 'y', 'w', 'h'] as const) {
+    const l = el('label', '', k === 'w' ? 'width' : k === 'h' ? 'height' : k)
+    const i = el('input')
+    i.type = 'number'
+    i.oninput = () => {
+      const v = Math.round(Number(i.value))
+      if (isNaN(v)) return
+      r[k] = v
+      show()
+    }
+    inputs[k] = i
+    l.appendChild(i)
+    nums.appendChild(l)
+  }
+
+  const load = async () => {
+    try {
+      desk = await net.api('GET', '/api/desktop')
+      if (!(desk.w > 0)) throw new Error('none')
+      pic.src = `/api/desktop.jpg?n=${Date.now()}`
+      show()
+    } catch {
+      alert(t('mirrorFail'))
+    }
+  }
+  // drag a rectangle on the picture
+  stageBox.addEventListener('pointerdown', (e) => {
+    if (!(desk.w > 0)) return
+    e.preventDefault()
+    const b = pic.getBoundingClientRect()
+    const at = (ev: PointerEvent) => [desk.x + (Math.min(Math.max(ev.clientX - b.left, 0), b.width) / b.width) * desk.w, desk.y + (Math.min(Math.max(ev.clientY - b.top, 0), b.height) / b.height) * desk.h]
+    const [sx, sy] = at(e)
+    const move = (ev: PointerEvent) => {
+      const [x, y] = at(ev)
+      r = { x: Math.round(Math.min(sx, x)), y: Math.round(Math.min(sy, y)), w: Math.round(Math.abs(x - sx)), h: Math.round(Math.abs(y - sy)) }
+      show()
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  })
+
+  const close = () => {
+    clearTimeout(previewTimer)
+    document.removeEventListener('keydown', onKey)
+    if (modal.parentNode) modal.parentNode.removeChild(modal)
+  }
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') close()
+  }
+  const foot = el('div', 'foot')
+  const again = el('button', 'btn', t('mirrorRefresh'))
+  again.onclick = () => void load()
+  const cancel = el('button', 'btn', t('cancel'))
+  cancel.onclick = close
+  const save = el('button', 'btn primary', t('mirrorSave'))
+  save.onclick = async () => {
+    await setConfig({ mirror: r })
+    close()
+  }
+  foot.appendChild(again)
+  foot.appendChild(cancel)
+  foot.appendChild(save)
+  box.appendChild(foot)
+  modal.addEventListener('pointerdown', (e) => {
+    if (e.target === modal) close()
+  })
+  document.addEventListener('keydown', onKey)
+  host.appendChild(modal)
+  show()
+  void load()
+}
+
 /** Ready-made looks for a blank layout; everything can be changed later in the editor. */
 const LOOKS: [string, Theme][] = [
   ['Midnight', { bg: '#05070a', panel: '#0f141b', text: '#f1f5f9', dim: '#7c8a9c', accent: '#38bdf8' }],
@@ -188,10 +302,12 @@ export function mountHome(root: HTMLElement): () => void {
   const phone = section(t('phone'))
   const games = section(t('games'))
   const apps = section(t('apps'))
+  const mirror = section(t('mirror'))
   const settings = section(t('settings'))
   const layouts = section(t('layouts'))
   left.appendChild(phone)
   left.appendChild(games)
+  left.appendChild(mirror)
   left.appendChild(apps)
   left.appendChild(settings)
   right.appendChild(layouts)
@@ -255,6 +371,26 @@ export function mountHome(root: HTMLElement): () => void {
       r.appendChild(select(o, cfg.assign[id] || '', (v) => void setConfig({ assign: { ...cfg.assign, [id]: v } })))
       games.appendChild(r)
     }
+
+    // --- screen mirror
+    body(mirror)
+    mirror.appendChild(el('p', 'hint', t('mirrorHelp')))
+    const mr = el('div', 'row')
+    const mn = el('div', 'grow')
+    const area = cfg.mirror
+    mn.appendChild(el('b', '', area ? `${area.w} × ${area.h} px` : t('mirrorNone')))
+    if (area) mn.appendChild(el('small', '', `x ${area.x} · y ${area.y}`))
+    mr.appendChild(el('i', `led ${area ? 'on' : 'off'}`))
+    mr.appendChild(mn)
+    const pickB = el('button', 'btn primary', t('mirrorPick'))
+    pickB.onclick = () => mirrorDialog(view, area)
+    mr.appendChild(pickB)
+    if (area) {
+      const off = el('button', 'btn', t('mirrorStop'))
+      off.onclick = () => void setConfig({ mirror: null })
+      mr.appendChild(off)
+    }
+    mirror.appendChild(mr)
 
     // --- sibling apps
     body(apps)
